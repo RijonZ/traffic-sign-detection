@@ -6,8 +6,8 @@ function Navbar({ currentUser, onLogout, onNavigate }) {
       </button>
 
       <div className="nav-links">
-        <button className="link-btn" onClick={() => onNavigate("home")}>
-          Features
+        <button className="link-btn" onClick={() => onNavigate("features")}>
+          System Overview
         </button>
 
         {currentUser && (
