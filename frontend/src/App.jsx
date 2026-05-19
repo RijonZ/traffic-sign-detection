@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import "./Home.css";
 import DashboardPage from "./pages/DashboardPage";
+import DetectSignPage from "./pages/DetectSignPage";
 import FeaturesPage from "./pages/FeaturesPage";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
@@ -134,6 +135,16 @@ function App() {
   if (page === "dashboard") {
     return (
       <DashboardPage
+        currentUser={currentUser}
+        onLogout={logout}
+        onNavigate={navigate}
+      />
+    );
+  }
+
+  if (page === "detect") {
+    return (
+      <DetectSignPage
         currentUser={currentUser}
         onLogout={logout}
         onNavigate={navigate}

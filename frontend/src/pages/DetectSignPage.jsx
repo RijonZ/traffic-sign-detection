@@ -1,0 +1,277 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import Navbar from "../shared/Navbar";
+
+const HISTORY_KEY = "traffic-sign-detections";
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
+const samplePredictions = [
+  { sign: "Stop Sign", category: "Regulatory", confidence: 96, box: "x: 124, y: 88, w: 210, h: 210" },
+  { sign: "Speed Limit", category: "Regulatory", confidence: 92, box: "x: 98, y: 74, w: 180, h: 180" },
+  { sign: "Pedestrian Crossing", category: "Warning", confidence: 89, box: "x: 140, y: 102, w: 195, h: 170" },
+  { sign: "No Entry", category: "Prohibition", confidence: 94, box: "x: 110, y: 90, w: 205, h: 205" },
+];
+
+const initialSteps = [
+  { label: "Created", done: false },
+  { label: "Uploaded", done: false },
+  { label: "Validating", done: false },
+  { label: "Processing", done: false },
+  { label: "Predicted", done: false },
+  { label: "Saved", done: false },
+  { label: "Notified", done: false },
+  { label: "Completed", done: false },
+];
+
+function readHistory() {
+  return JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+}
+
+function DetectSignPage({ currentUser, onLogout, onNavigate }) {
+  const [file, setFile] = useState(null);
+  const [preview, setPreview] = useState("");
+  const [error, setError] = useState("");
+  const [status, setStatus] = useState("Ready");
+  const [steps, setSteps] = useState(initialSteps);
+  const [result, setResult] = useState(null);
+  const [history, setHistory] = useState(readHistory);
+  const timers = useRef([]);
+
+  const canDetect = useMemo(() => file && !error && status !== "Processing", [file, error, status]);
+
+  useEffect(() => {
+    return () => {
+      clearTimers();
+      if (preview) {
+        URL.revokeObjectURL(preview);
+      }
+    };
+  }, [preview]);
+
+  function clearTimers() {
+    timers.current.forEach((timer) => clearTimeout(timer));
+    timers.current = [];
+  }
+
+  function updateStep(index, nextStatus) {
+    timers.current.push(
+      setTimeout(() => {
+        setSteps((currentSteps) =>
+          currentSteps.map((step, stepIndex) => ({
+            ...step,
+            done: stepIndex <= index,
+          }))
+        );
+        setStatus(nextStatus);
+      }, index * 450)
+    );
+  }
+
+  function validateFile(selectedFile) {
+    if (!selectedFile) {
+      return "Please select an image first.";
+    }
+
+    if (!selectedFile.type.startsWith("image/")) {
+      return "Only image files are allowed.";
+    }
+
+    if (selectedFile.size > MAX_FILE_SIZE) {
+      return "Image size must be under 5 MB.";
+    }
+
+    return "";
+  }
+
+  function handleFileChange(event) {
+    const selectedFile = event.target.files[0];
+    const validationMessage = validateFile(selectedFile);
+
+    clearTimers();
+    setFile(selectedFile || null);
+    setError(validationMessage);
+    setResult(null);
+    setSteps(initialSteps);
+    setStatus(selectedFile ? "Created" : "Ready");
+
+    if (preview) {
+      URL.revokeObjectURL(preview);
+    }
+
+    setPreview(selectedFile && !validationMessage ? URL.createObjectURL(selectedFile) : "");
+  }
+
+  function runDetection() {
+    const validationMessage = validateFile(file);
+
+    if (validationMessage) {
+      setError(validationMessage);
+      setStatus("Rejected");
+      setSteps(initialSteps);
+      return;
+    }
+
+    clearTimers();
+    setError("");
+    setResult(null);
+    setSteps(initialSteps);
+
+    ["Created", "Uploaded", "Validating", "Processing", "Predicted", "Saved", "Notified", "Completed"].forEach(
+      (stepStatus, index) => updateStep(index, stepStatus)
+    );
+
+    timers.current.push(
+      setTimeout(() => {
+        const prediction = samplePredictions[file.name.length % samplePredictions.length];
+        const completedResult = {
+          id: Date.now(),
+          fileName: file.name,
+          requestedBy: currentUser.name,
+          detectedAt: new Date().toLocaleString(),
+          ...prediction,
+        };
+        const nextHistory = [completedResult, ...history].slice(0, 5);
+
+        setResult(completedResult);
+        setHistory(nextHistory);
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(nextHistory));
+      }, 3400)
+    );
+  }
+
+  function downloadReport() {
+    if (!result) {
+      return;
+    }
+
+    const report = [
+      "Traffic Sign Detection Report",
+      `User: ${result.requestedBy}`,
+      `Image: ${result.fileName}`,
+      `Detected sign: ${result.sign}`,
+      `Category: ${result.category}`,
+      `Confidence: ${result.confidence}%`,
+      `Bounding box: ${result.box}`,
+      `Detected at: ${result.detectedAt}`,
+    ].join("\n");
+
+    const reportUrl = URL.createObjectURL(new Blob([report], { type: "text/plain" }));
+    const link = document.createElement("a");
+    link.href = reportUrl;
+    link.download = "traffic-sign-report.txt";
+    link.click();
+    URL.revokeObjectURL(reportUrl);
+  }
+
+  if (!currentUser) {
+    return (
+      <div className="home">
+        <Navbar onNavigate={onNavigate} />
+        <main className="page-shell">
+          <section className="auth-card">
+            <h1>Sign in required</h1>
+            <p>You need an account before detecting traffic signs.</p>
+            <button className="primary-btn" onClick={() => onNavigate("login")}>
+              Go to login
+            </button>
+          </section>
+        </main>
+      </div>
+    );
+  }
+
+  return (
+    <div className="home">
+      <Navbar currentUser={currentUser} onLogout={onLogout} onNavigate={onNavigate} />
+
+      <main className="page-shell">
+        <section className="detect-header">
+          <div>
+            <span className="eyebrow">Detection page</span>
+            <h1>Detect Traffic Sign</h1>
+            <p>
+              Upload a road image, validate it, run a simple prediction flow, and save the result
+              in your local detection history.
+            </p>
+          </div>
+          <span className="status-pill">{status}</span>
+        </section>
+
+        <section className="detect-layout">
+          <div className="detect-panel">
+            <h3>Upload Image</h3>
+            <label className="upload-box">
+              <input type="file" accept="image/*" onChange={handleFileChange} />
+              <span>{file ? file.name : "Choose traffic sign image"}</span>
+            </label>
+
+            {error && <p className="auth-error">{error}</p>}
+
+            {preview ? (
+              <img className="image-preview" src={preview} alt="Uploaded traffic sign preview" />
+            ) : (
+              <div className="empty-preview">Image preview</div>
+            )}
+
+            <button className="primary-btn full-width" disabled={!canDetect} onClick={runDetection}>
+              Run Detection
+            </button>
+          </div>
+
+          <div className="detect-panel">
+            <h3>Prediction Result</h3>
+            {result ? (
+              <div className="result-box">
+                <h2>{result.sign}</h2>
+                <p>{result.category}</p>
+                <strong>{result.confidence}% confidence</strong>
+                <span>{result.box}</span>
+                <button className="secondary-btn" onClick={downloadReport}>
+                  Download Report
+                </button>
+              </div>
+            ) : (
+              <p className="muted-text">Result will appear here after the image is processed.</p>
+            )}
+          </div>
+        </section>
+
+        <section className="feature-section detect-flow">
+          <div>
+            <span className="eyebrow">Request state</span>
+            <h2>Simple detection workflow</h2>
+            <p>
+              This follows the project diagrams: created, uploaded, validated, processed by the
+              model, saved, notified, and completed.
+            </p>
+          </div>
+
+          <div className="workflow-list">
+            {steps.map((step, index) => (
+              <div className={`workflow-step ${step.done ? "step-done" : ""}`} key={step.label}>
+                <span>{index + 1}</span>
+                <p>{step.label}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="activity-panel">
+          <div>
+            <h3>Recent Detection History</h3>
+            {history.length ? (
+              history.map((item) => (
+                <p key={item.id}>
+                  {item.sign} from {item.fileName} - {item.confidence}%
+                </p>
+              ))
+            ) : (
+              <p>No completed detections yet.</p>
+            )}
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}
+
+export default DetectSignPage;

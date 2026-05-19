@@ -33,7 +33,9 @@ function DashboardPage({ currentUser, onLogout, onNavigate }) {
             <h1>Detection Dashboard</h1>
             <p>Manage uploads, review predictions, and monitor account activity.</p>
           </div>
-          <button className="primary-btn">Upload Image</button>
+          <button className="primary-btn" onClick={() => onNavigate("detect")}>
+            Upload Image
+          </button>
         </section>
 
         <section className="dashboard-grid">

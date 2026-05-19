@@ -11,9 +11,14 @@ function Navbar({ currentUser, onLogout, onNavigate }) {
         </button>
 
         {currentUser && (
-          <button className="link-btn" onClick={() => onNavigate("dashboard")}>
-            Dashboard
-          </button>
+          <>
+            <button className="link-btn" onClick={() => onNavigate("detect")}>
+              Detect Sign
+            </button>
+            <button className="link-btn" onClick={() => onNavigate("dashboard")}>
+              Dashboard
+            </button>
+          </>
         )}
 
         {currentUser ? (

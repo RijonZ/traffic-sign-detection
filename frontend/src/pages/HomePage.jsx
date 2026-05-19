@@ -22,7 +22,7 @@ function HomePage({ currentUser, onLogout, onNavigate }) {
           <div className="hero-buttons">
             <button
               className="primary-btn"
-              onClick={() => onNavigate(currentUser ? "dashboard" : "login")}
+              onClick={() => onNavigate(currentUser ? "detect" : "login")}
             >
               Start Detection
             </button>
