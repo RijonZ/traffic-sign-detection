@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import DashboardLayout from "../shared/DashboardLayout";
 import Navbar from "../shared/Navbar";
 
 const HISTORY_KEY = "traffic-sign-detections";
@@ -180,10 +181,12 @@ function DetectSignPage({ currentUser, onLogout, onNavigate }) {
   }
 
   return (
-    <div className="home">
-      <Navbar currentUser={currentUser} onLogout={onLogout} onNavigate={onNavigate} />
-
-      <main className="page-shell">
+    <DashboardLayout
+      activePage="detect"
+      currentUser={currentUser}
+      onLogout={onLogout}
+      onNavigate={onNavigate}
+    >
         <section className="detect-header">
           <div>
             <span className="eyebrow">Detection page</span>
@@ -269,8 +272,7 @@ function DetectSignPage({ currentUser, onLogout, onNavigate }) {
             )}
           </div>
         </section>
-      </main>
-    </div>
+    </DashboardLayout>
   );
 }
 

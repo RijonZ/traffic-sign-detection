@@ -28,7 +28,7 @@ function LoginPage({ currentUser, onLogin, onLogout, onNavigate }) {
           <form className="auth-card" onSubmit={handleSubmit}>
             <span className="eyebrow">Account access</span>
             <h1>Welcome back</h1>
-            <p>Sign in to manage traffic sign detection requests and review results.</p>
+            <p>Use the sample role emails or sign in with any other email as a normal user.</p>
 
             <label>
               Email
@@ -56,26 +56,26 @@ function LoginPage({ currentUser, onLogin, onLogout, onNavigate }) {
               Sign in
             </button>
 
-            <button
-              className="text-btn"
-              type="button"
-              onClick={() => onNavigate("signup")}
-            >
+            <button className="text-btn" type="button" onClick={() => onNavigate("signup")}>
               Request access
             </button>
           </form>
 
           <div className="info-card">
-            <span className="status-pill">Protected workspace</span>
-            <h3>Detection operations, organized</h3>
+            <span className="status-pill">Secure workspace</span>
+            <h3>Dashboard access by role</h3>
             <p>
-              Access uploaded images, review prediction confidence, and keep
-              detection activity in one dashboard.
+              After signing in, each account opens a workspace tailored to its
+              permissions and responsibilities.
+            </p>
+            <p>
+              Users can focus on detections, managers can review operational
+              data, and admins can oversee the full system.
             </p>
             <div className="mini-list">
-              <p>Role-based account area</p>
-              <p>Detection history ready</p>
-              <p>Secure sign-in experience</p>
+              <p>Personalized navigation</p>
+              <p>Protected dashboard pages</p>
+              <p>Clear access boundaries</p>
             </div>
           </div>
         </section>

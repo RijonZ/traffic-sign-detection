@@ -1,7 +1,7 @@
 import DashboardLayout from "../shared/DashboardLayout";
 import Navbar from "../shared/Navbar";
 
-function DashboardPage({ currentUser, onLogout, onNavigate }) {
+function ReportsPage({ currentUser, onLogout, onNavigate }) {
   if (!currentUser) {
     return (
       <div className="home">
@@ -9,7 +9,7 @@ function DashboardPage({ currentUser, onLogout, onNavigate }) {
         <main className="page-shell">
           <section className="auth-card">
             <h1>Sign in required</h1>
-            <p>You need an account before opening the dashboard.</p>
+            <p>You need an account before opening reports.</p>
             <button className="primary-btn" onClick={() => onNavigate("login")}>
               Go to login
             </button>
@@ -21,43 +21,41 @@ function DashboardPage({ currentUser, onLogout, onNavigate }) {
 
   return (
     <DashboardLayout
-      activePage="dashboard"
+      activePage="reports"
       currentUser={currentUser}
       onLogout={onLogout}
       onNavigate={onNavigate}
     >
       <section className="dashboard-header">
         <div>
-          <span className="eyebrow">Operations center</span>
-          <h1>Detection Dashboard</h1>
-          <p>Manage uploads, review predictions, and monitor account activity.</p>
+          <span className="eyebrow">Reports</span>
+          <h1>Detection Reports</h1>
+          <p>Prepare exports, review report-ready detections, and track reporting status.</p>
         </div>
         <button className="primary-btn" onClick={() => onNavigate("detect")}>
-          Upload Image
+          New Detection
         </button>
       </section>
 
       <section className="dashboard-grid">
         <div className="dashboard-card">
-          <h3>Current Status</h3>
-          <p>Ready for the next image upload.</p>
+          <h3>Available Reports</h3>
+          <p>4</p>
         </div>
-
         <div className="dashboard-card">
-          <h3>Latest Result</h3>
-          <p>Prediction results will appear here after analysis.</p>
+          <h3>Ready to Export</h3>
+          <p>3</p>
         </div>
-
         <div className="dashboard-card">
-          <h3>Account Type</h3>
-          <p>{currentUser.role}</p>
+          <h3>Needs Review</h3>
+          <p>1</p>
         </div>
       </section>
 
-      <section className="activity-panel">
+      <section className="activity-panel report-panel">
         <div>
-          <h3>Recent Activity</h3>
-          <p>No recent detections yet.</p>
+          <h3>Latest Report Package</h3>
+          <p>Traffic sign detections with request ID, sign label, confidence, and status.</p>
         </div>
         <button className="secondary-btn" onClick={() => onNavigate("history")}>
           View History
@@ -67,4 +65,4 @@ function DashboardPage({ currentUser, onLogout, onNavigate }) {
   );
 }
 
-export default DashboardPage;
+export default ReportsPage;

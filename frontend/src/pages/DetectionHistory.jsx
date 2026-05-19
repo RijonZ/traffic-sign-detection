@@ -1,3 +1,4 @@
+import DashboardLayout from "../shared/DashboardLayout";
 import Navbar from "../shared/Navbar";
 
 const detections = [
@@ -36,15 +37,30 @@ const detections = [
 ];
 
 function DetectionHistory({ currentUser, onLogout, onNavigate }) {
-  return (
-    <div className="home">
-      <Navbar
-        currentUser={currentUser}
-        onLogout={onLogout}
-        onNavigate={onNavigate}
-      />
+  if (!currentUser) {
+    return (
+      <div className="home">
+        <Navbar onNavigate={onNavigate} />
+        <main className="page-shell">
+          <section className="auth-card">
+            <h1>Sign in required</h1>
+            <p>You need an account before opening detection history.</p>
+            <button className="primary-btn" onClick={() => onNavigate("login")}>
+              Go to login
+            </button>
+          </section>
+        </main>
+      </div>
+    );
+  }
 
-      <main className="page-shell">
+  return (
+    <DashboardLayout
+      activePage="history"
+      currentUser={currentUser}
+      onLogout={onLogout}
+      onNavigate={onNavigate}
+    >
         <section className="dashboard-header">
           <div>
             <span className="eyebrow">Saved detections</span>
@@ -99,8 +115,7 @@ function DetectionHistory({ currentUser, onLogout, onNavigate }) {
             </div>
           ))}
         </section>
-      </main>
-    </div>
+    </DashboardLayout>
   );
 }
 

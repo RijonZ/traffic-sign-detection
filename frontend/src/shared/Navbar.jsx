@@ -1,4 +1,4 @@
-function Navbar({ currentUser, onLogout, onNavigate }) {
+function Navbar({ currentUser, onNavigate }) {
   return (
     <nav className="navbar">
       <button className="brand-btn" onClick={() => onNavigate("home")}>
@@ -6,33 +6,20 @@ function Navbar({ currentUser, onLogout, onNavigate }) {
       </button>
 
       <div className="nav-links">
+        <button className="link-btn" onClick={() => onNavigate("home")}>
+          Home
+        </button>
         <button className="link-btn" onClick={() => onNavigate("features")}>
           System Overview
         </button>
-
-        {currentUser && (
-          <>
-            <button className="link-btn" onClick={() => onNavigate("detect")}>
-              Detect Sign
-            </button>
-            <button className="link-btn" onClick={() => onNavigate("dashboard")}>
-              Dashboard
-            </button>
-          </>
-        )}
-
-        <button className="link-btn" onClick={() => onNavigate("history")}>
-          History
-        </button>
-
         {currentUser ? (
-          <button onClick={onLogout}>Logout</button>
+          <button onClick={() => onNavigate("dashboard")}>Dashboard</button>
         ) : (
           <>
-            <button className="link-btn" onClick={() => onNavigate("signup")}>
-              Request access
-            </button>
             <button onClick={() => onNavigate("login")}>Login</button>
+            <button className="secondary-btn" onClick={() => onNavigate("signup")}>
+              Request Access
+            </button>
           </>
         )}
       </div>

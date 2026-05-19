@@ -40,7 +40,7 @@ function HomePage({ currentUser, onLogout, onNavigate }) {
           <p>3. Track the result</p>
           <button
             className="secondary-btn full-width"
-            onClick={() => onNavigate("history")}
+            onClick={() => onNavigate(currentUser ? "history" : "login")}
           >
             View History
           </button>
@@ -61,7 +61,7 @@ function HomePage({ currentUser, onLogout, onNavigate }) {
         <div>
           <h3>Detection History</h3>
           <p>Keep previous detection requests available for follow-up review.</p>
-          <button className="text-btn" onClick={() => onNavigate("history")}>
+          <button className="text-btn" onClick={() => onNavigate("login")}>
             Open history
           </button>
         </div>
