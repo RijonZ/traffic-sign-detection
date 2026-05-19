@@ -1,17 +1,30 @@
 import { useState } from "react";
 import Navbar from "../shared/Navbar";
 
-function LoginPage({ currentUser, onLogin, onLogout, onNavigate }) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [message, setMessage] = useState("");
+function LoginPage({ currentUser, onLogin, onLogout, onNavigate, onSignUp }) {
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [signupName, setSignupName] = useState("");
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [loginMessage, setLoginMessage] = useState("");
+  const [signupMessage, setSignupMessage] = useState("");
 
-  function handleSubmit(event) {
+  function handleLogin(event) {
     event.preventDefault();
-    const result = onLogin(email, password);
+    const result = onLogin(loginEmail, loginPassword);
 
     if (!result.ok) {
-      setMessage(result.message);
+      setLoginMessage(result.message);
+    }
+  }
+
+  function handleSignUp(event) {
+    event.preventDefault();
+    const result = onSignUp(signupName, signupEmail, signupPassword);
+
+    if (!result.ok) {
+      setSignupMessage(result.message);
     }
   }
 
@@ -25,17 +38,17 @@ function LoginPage({ currentUser, onLogin, onLogout, onNavigate }) {
 
       <main className="page-shell">
         <section className="auth-page">
-          <form className="auth-card" onSubmit={handleSubmit}>
+          <form className="auth-card" onSubmit={handleLogin}>
             <span className="eyebrow">Account access</span>
             <h1>Welcome back</h1>
-            <p>Sign in to manage traffic sign detection requests and review results.</p>
+            <p>Sign in with your account email to open the right workspace.</p>
 
             <label>
               Email
               <input
                 type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
+                value={loginEmail}
+                onChange={(event) => setLoginEmail(event.target.value)}
                 required
               />
             </label>
@@ -44,40 +57,61 @@ function LoginPage({ currentUser, onLogin, onLogout, onNavigate }) {
               Password
               <input
                 type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
+                value={loginPassword}
+                onChange={(event) => setLoginPassword(event.target.value)}
                 required
               />
             </label>
 
-            {message && <p className="auth-error">{message}</p>}
+            {loginMessage && <p className="auth-error">{loginMessage}</p>}
 
             <button className="primary-btn full-width" type="submit">
               Sign in
             </button>
-
-            <button
-              className="text-btn"
-              type="button"
-              onClick={() => onNavigate("signup")}
-            >
-              Request access
-            </button>
           </form>
 
-          <div className="info-card">
-            <span className="status-pill">Protected workspace</span>
-            <h3>Detection operations, organized</h3>
-            <p>
-              Access uploaded images, review prediction confidence, and keep
-              detection activity in one dashboard.
-            </p>
-            <div className="mini-list">
-              <p>Role-based account area</p>
-              <p>Detection history ready</p>
-              <p>Secure sign-in experience</p>
-            </div>
-          </div>
+          <form className="auth-card" onSubmit={handleSignUp}>
+            <span className="eyebrow">New account</span>
+            <h1>Sign up</h1>
+            <p>Use an admin, manager, or regular email to choose the workspace role.</p>
+
+            <label>
+              Name
+              <input
+                type="text"
+                value={signupName}
+                onChange={(event) => setSignupName(event.target.value)}
+                required
+              />
+            </label>
+
+            <label>
+              Email
+              <input
+                type="email"
+                value={signupEmail}
+                onChange={(event) => setSignupEmail(event.target.value)}
+                required
+              />
+            </label>
+
+            <label>
+              Password
+              <input
+                minLength="6"
+                type="password"
+                value={signupPassword}
+                onChange={(event) => setSignupPassword(event.target.value)}
+                required
+              />
+            </label>
+
+            {signupMessage && <p className="auth-error">{signupMessage}</p>}
+
+            <button className="secondary-btn full-width" type="submit">
+              Create account
+            </button>
+          </form>
         </section>
       </main>
     </div>

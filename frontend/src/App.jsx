@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import "./Home.css";
+import BlankPage from "./pages/BlankPage";
 import DashboardPage from "./pages/DashboardPage";
 import DetectSignPage from "./pages/DetectSignPage";
 import DetectionHistory from "./pages/DetectionHistory";
 import FeaturesPage from "./pages/FeaturesPage";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
-import SignUpPage from "./pages/SignUpPage";
 
 const ADMIN_USER = {
   name: "Admin",
@@ -15,22 +15,55 @@ const ADMIN_USER = {
   role: "Administrator",
 };
 
+const MANAGER_USER = {
+  name: "Manager",
+  email: "manager@trafficsign.ai",
+  password: "manager123",
+  role: "Manager",
+};
+
 const USERS_KEY = "traffic-sign-users";
 const SESSION_KEY = "traffic-sign-session";
+const DEFAULT_USERS = [ADMIN_USER, MANAGER_USER];
+
+const blankPages = {
+  "admin-dashboard": "Admin Dashboard",
+  "all-detections": "All Detections",
+  users: "Users",
+  reports: "Reports",
+  "model-monitoring": "Model Monitoring",
+  "audit-logs": "Audit Logs",
+  "dashboard-analytics": "Dashboard Analytics",
+  "export-data": "Export Data",
+  "my-reports": "My Reports",
+};
 
 function readUsers() {
   const savedUsers = JSON.parse(localStorage.getItem(USERS_KEY) || "[]");
-  const hasAdmin = savedUsers.some((user) => user.email === ADMIN_USER.email);
+  const missingDefaultUsers = DEFAULT_USERS.filter(
+    (defaultUser) =>
+      !savedUsers.some((user) => user.email.toLowerCase() === defaultUser.email.toLowerCase())
+  );
 
-  if (hasAdmin) {
-    return savedUsers;
-  }
-
-  return [ADMIN_USER, ...savedUsers];
+  return [...missingDefaultUsers, ...savedUsers];
 }
 
 function getPageFromHash() {
   return window.location.hash.replace("#/", "") || "home";
+}
+
+function getRoleFromEmail(email) {
+  const normalizedEmail = email.toLowerCase();
+
+  if (normalizedEmail.includes("admin")) {
+    return "Administrator";
+  }
+
+  if (normalizedEmail.includes("manager")) {
+    return "Manager";
+  }
+
+  return "User";
 }
 
 function App() {
@@ -58,6 +91,18 @@ function App() {
     setPage(nextPage);
   }
 
+  function getLandingPage(role) {
+    if (role === "Administrator") {
+      return "admin-dashboard";
+    }
+
+    if (role === "Manager") {
+      return "dashboard-analytics";
+    }
+
+    return "dashboard";
+  }
+
   function login(email, password) {
     const user = users.find(
       (savedUser) =>
@@ -69,15 +114,16 @@ function App() {
       return { ok: false, message: "Invalid email or password." };
     }
 
+    const role = getRoleFromEmail(user.email);
     const sessionUser = {
       email: user.email,
       name: user.name,
-      role: user.role,
+      role,
     };
 
     setCurrentUser(sessionUser);
     localStorage.setItem(SESSION_KEY, JSON.stringify(sessionUser));
-    navigate("dashboard");
+    navigate(getLandingPage(role));
     return { ok: true };
   }
 
@@ -94,14 +140,16 @@ function App() {
       name,
       email,
       password,
-      role: "User",
+      role: getRoleFromEmail(email),
     };
 
     const nextUsers = [...users, newUser];
+    const sessionUser = { email, name, role: newUser.role };
+
     setUsers(nextUsers);
-    setCurrentUser({ email, name, role: "User" });
-    localStorage.setItem(SESSION_KEY, JSON.stringify({ email, name, role: "User" }));
-    navigate("dashboard");
+    setCurrentUser(sessionUser);
+    localStorage.setItem(SESSION_KEY, JSON.stringify(sessionUser));
+    navigate(getLandingPage(newUser.role));
     return { ok: true };
   }
 
@@ -118,14 +166,16 @@ function App() {
         onLogin={login}
         onLogout={logout}
         onNavigate={navigate}
+        onSignUp={signUp}
       />
     );
   }
 
   if (page === "signup") {
     return (
-      <SignUpPage
+      <LoginPage
         currentUser={currentUser}
+        onLogin={login}
         onLogout={logout}
         onNavigate={navigate}
         onSignUp={signUp}
@@ -169,6 +219,17 @@ function App() {
         currentUser={currentUser}
         onLogout={logout}
         onNavigate={navigate}
+      />
+    );
+  }
+
+  if (blankPages[page]) {
+    return (
+      <BlankPage
+        currentUser={currentUser}
+        onLogout={logout}
+        onNavigate={navigate}
+        title={blankPages[page]}
       />
     );
   }

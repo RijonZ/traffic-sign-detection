@@ -26,8 +26,8 @@ function HomePage({ currentUser, onLogout, onNavigate }) {
             >
               Start Detection
             </button>
-            <button className="secondary-btn" onClick={() => onNavigate("signup")}>
-              Request Access
+            <button className="secondary-btn" onClick={() => onNavigate("login")}>
+              Login / Sign Up
             </button>
           </div>
         </div>
