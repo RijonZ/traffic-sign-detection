@@ -16,6 +16,10 @@ function Navbar({ currentUser, onLogout, onNavigate }) {
           </button>
         )}
 
+        <button className="link-btn" onClick={() => onNavigate("history")}>
+          History
+        </button>
+
         {currentUser ? (
           <button onClick={onLogout}>Logout</button>
         ) : (

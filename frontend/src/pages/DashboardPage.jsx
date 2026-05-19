@@ -58,7 +58,9 @@ function DashboardPage({ currentUser, onLogout, onNavigate }) {
             <h3>Recent Activity</h3>
             <p>No recent detections yet.</p>
           </div>
-          <button className="secondary-btn">View History</button>
+          <button className="secondary-btn" onClick={() => onNavigate("history")}>
+            View History
+          </button>
         </section>
       </main>
     </div>

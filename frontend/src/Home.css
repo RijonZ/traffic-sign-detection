@@ -399,6 +399,52 @@ button {
   margin-top: 26px;
 }
 
+.history-summary {
+  display: grid;
+  gap: 22px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 24px;
+}
+
+.history-summary .dashboard-card p {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.history-table {
+  background-color: white;
+  border: 1px solid #e8edf5;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.history-row {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 1fr 1.4fr 1.4fr 1fr 1fr 1fr;
+  padding: 16px 20px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.history-row:first-child {
+  border-top: none;
+}
+
+.history-row p {
+  color: #4b5563;
+  margin: 0;
+}
+
+.history-head {
+  background-color: #f8fafc;
+  font-weight: 700;
+}
+
+.history-head p {
+  color: #1f2937;
+}
+
 @media (max-width: 768px) {
   .hero {
     flex-direction: column;
@@ -411,9 +457,14 @@ button {
 
   .auth-page,
   .dashboard-grid,
+  .history-summary,
   .features-grid,
   .feature-section,
   .role-section {
+    grid-template-columns: 1fr;
+  }
+
+  .history-row {
     grid-template-columns: 1fr;
   }
 
