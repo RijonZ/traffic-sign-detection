@@ -1,4 +1,3 @@
-import DashboardLayout from "../shared/DashboardLayout";
 import Navbar from "../shared/Navbar";
 
 const userBenefits = [
@@ -64,30 +63,15 @@ const helpfulSections = [
 ];
 
 function FeaturesPage({ currentUser, onLogout, onNavigate }) {
-  if (!currentUser) {
-    return (
-      <div className="home">
-        <Navbar onNavigate={onNavigate} />
-        <main className="page-shell">
-          <section className="auth-card">
-            <h1>Sign in required</h1>
-            <p>You need an account before opening the system overview.</p>
-            <button className="primary-btn" onClick={() => onNavigate("login")}>
-              Go to login
-            </button>
-          </section>
-        </main>
-      </div>
-    );
-  }
-
   return (
-    <DashboardLayout
-      activePage="features"
-      currentUser={currentUser}
-      onLogout={onLogout}
-      onNavigate={onNavigate}
-    >
+    <div className="home">
+      <Navbar
+        currentUser={currentUser}
+        onLogout={onLogout}
+        onNavigate={onNavigate}
+      />
+
+      <main className="page-shell">
         <section className="features-header">
           <span className="eyebrow">System overview</span>
           <h1>Traffic Sign Detection for Users</h1>
@@ -137,7 +121,8 @@ function FeaturesPage({ currentUser, onLogout, onNavigate }) {
             </div>
           ))}
         </section>
-    </DashboardLayout>
+      </main>
+    </div>
   );
 }
 

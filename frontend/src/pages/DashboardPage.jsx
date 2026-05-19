@@ -1,4 +1,3 @@
-import DashboardLayout from "../shared/DashboardLayout";
 import Navbar from "../shared/Navbar";
 
 function DashboardPage({ currentUser, onLogout, onNavigate }) {
@@ -20,50 +19,53 @@ function DashboardPage({ currentUser, onLogout, onNavigate }) {
   }
 
   return (
-    <DashboardLayout
-      activePage="dashboard"
-      currentUser={currentUser}
-      onLogout={onLogout}
-      onNavigate={onNavigate}
-    >
-      <section className="dashboard-header">
-        <div>
-          <span className="eyebrow">Operations center</span>
-          <h1>Detection Dashboard</h1>
-          <p>Manage uploads, review predictions, and monitor account activity.</p>
-        </div>
-        <button className="primary-btn" onClick={() => onNavigate("detect")}>
-          Upload Image
-        </button>
-      </section>
+    <div className="home">
+      <Navbar
+        currentUser={currentUser}
+        onLogout={onLogout}
+        onNavigate={onNavigate}
+      />
 
-      <section className="dashboard-grid">
-        <div className="dashboard-card">
-          <h3>Current Status</h3>
-          <p>Ready for the next image upload.</p>
-        </div>
+      <main className="page-shell">
+        <section className="dashboard-header">
+          <div>
+            <span className="eyebrow">Operations center</span>
+            <h1>Detection Dashboard</h1>
+            <p>Manage uploads, review predictions, and monitor account activity.</p>
+          </div>
+          <button className="primary-btn" onClick={() => onNavigate("detect")}>
+            Upload Image
+          </button>
+        </section>
 
-        <div className="dashboard-card">
-          <h3>Latest Result</h3>
-          <p>Prediction results will appear here after analysis.</p>
-        </div>
+        <section className="dashboard-grid">
+          <div className="dashboard-card">
+            <h3>Current Status</h3>
+            <p>Ready for the next image upload.</p>
+          </div>
 
-        <div className="dashboard-card">
-          <h3>Account Type</h3>
-          <p>{currentUser.role}</p>
-        </div>
-      </section>
+          <div className="dashboard-card">
+            <h3>Latest Result</h3>
+            <p>Prediction results will appear here after analysis.</p>
+          </div>
 
-      <section className="activity-panel">
-        <div>
-          <h3>Recent Activity</h3>
-          <p>No recent detections yet.</p>
-        </div>
-        <button className="secondary-btn" onClick={() => onNavigate("history")}>
-          View History
-        </button>
-      </section>
-    </DashboardLayout>
+          <div className="dashboard-card">
+            <h3>Account Type</h3>
+            <p>{currentUser.role}</p>
+          </div>
+        </section>
+
+        <section className="activity-panel">
+          <div>
+            <h3>Recent Activity</h3>
+            <p>No recent detections yet.</p>
+          </div>
+          <button className="secondary-btn" onClick={() => onNavigate("history")}>
+            View History
+          </button>
+        </section>
+      </main>
+    </div>
   );
 }
 
