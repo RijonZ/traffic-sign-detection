@@ -38,6 +38,12 @@ function HomePage({ currentUser, onLogout, onNavigate }) {
           <p>1. Upload a road image</p>
           <p>2. Review model prediction</p>
           <p>3. Track the result</p>
+          <button
+            className="secondary-btn full-width"
+            onClick={() => onNavigate("history")}
+          >
+            View History
+          </button>
         </div>
       </section>
 
@@ -55,6 +61,9 @@ function HomePage({ currentUser, onLogout, onNavigate }) {
         <div>
           <h3>Detection History</h3>
           <p>Keep previous detection requests available for follow-up review.</p>
+          <button className="text-btn" onClick={() => onNavigate("history")}>
+            Open history
+          </button>
         </div>
       </section>
     </div>

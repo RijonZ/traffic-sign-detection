@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import "./Home.css";
 import DashboardPage from "./pages/DashboardPage";
 import DetectSignPage from "./pages/DetectSignPage";
+import DetectionHistory from "./pages/DetectionHistory";
 import FeaturesPage from "./pages/FeaturesPage";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
@@ -155,6 +156,16 @@ function App() {
   if (page === "features") {
     return (
       <FeaturesPage
+        currentUser={currentUser}
+        onLogout={logout}
+        onNavigate={navigate}
+      />
+    );
+  }
+
+  if (page === "history") {
+    return (
+      <DetectionHistory
         currentUser={currentUser}
         onLogout={logout}
         onNavigate={navigate}
