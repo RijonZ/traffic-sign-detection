@@ -7,6 +7,7 @@ import DashboardAnalytics from "./pages/DashboardAnalytics";
 import DashboardPage from "./pages/DashboardPage";
 import DetectSignPage from "./pages/DetectSignPage";
 import DetectionHistory from "./pages/DetectionHistory";
+import ExportData from "./pages/ExportData";
 import FeaturesPage from "./pages/FeaturesPage";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
@@ -35,7 +36,6 @@ const DEFAULT_USERS = [ADMIN_USER, MANAGER_USER];
 const blankPages = {
   "model-monitoring": "Model Monitoring",
   "audit-logs": "Audit Logs",
-  "export-data": "Export Data",
 };
 
 function readUsers() {
@@ -276,6 +276,16 @@ function App() {
   if (page === "dashboard-analytics") {
     return (
       <DashboardAnalytics
+        currentUser={currentUser}
+        onLogout={logout}
+        onNavigate={navigate}
+      />
+    );
+  }
+
+  if (page === "export-data") {
+    return (
+      <ExportData
         currentUser={currentUser}
         onLogout={logout}
         onNavigate={navigate}

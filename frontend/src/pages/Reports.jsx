@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import Navbar from "../shared/Navbar";
+import { downloadReportPdf } from "../utils/reportPdf";
 import "../styles/auth.css";
 import "../styles/dashboard.css";
 import "../styles/history.css";
@@ -70,24 +71,10 @@ function Reports({ currentUser, onLogout, onNavigate }) {
   );
 
   function downloadReport(report) {
-    const reportText = [
-      "Traffic Sign Detection Report",
-      `Report ID: ${report.id}`,
-      `Requested by: ${report.requestedBy}`,
-      `Image: ${report.fileName}`,
-      `Detected sign: ${report.sign}`,
-      `Category: ${report.category}`,
-      `Confidence: ${report.confidence}%`,
-      `Status: ${report.status}`,
-      `Created at: ${report.createdAt}`,
-    ].join("\n");
-
-    const reportUrl = URL.createObjectURL(new Blob([reportText], { type: "text/plain" }));
-    const link = document.createElement("a");
-    link.href = reportUrl;
-    link.download = `${report.id.toLowerCase()}-traffic-sign-report.txt`;
-    link.click();
-    URL.revokeObjectURL(reportUrl);
+    downloadReportPdf(
+      { ...report, user: report.requestedBy },
+      `${report.id.toLowerCase()}-traffic-sign-report.pdf`
+    );
   }
 
   if (!currentUser) {

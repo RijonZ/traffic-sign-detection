@@ -50,6 +50,22 @@
   line-height: 1.5;
 }
 
+.report-detail label {
+  display: block;
+  font-weight: 700;
+  margin: 18px 0 8px;
+}
+
+.report-detail select {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  box-sizing: border-box;
+  font: inherit;
+  margin-bottom: 18px;
+  padding: 12px;
+  width: 100%;
+}
+
 .admin-report-layout {
   align-items: flex-start;
   display: grid;

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Navbar from "../shared/Navbar";
+import { downloadReportPdf } from "../utils/reportPdf";
 import "../styles/auth.css";
 import "../styles/dashboard.css";
 import "../styles/detect.css";
@@ -147,23 +148,10 @@ function DetectSignPage({ currentUser, onLogout, onNavigate }) {
       return;
     }
 
-    const report = [
-      "Traffic Sign Detection Report",
-      `User: ${result.requestedBy}`,
-      `Image: ${result.fileName}`,
-      `Detected sign: ${result.sign}`,
-      `Category: ${result.category}`,
-      `Confidence: ${result.confidence}%`,
-      `Bounding box: ${result.box}`,
-      `Detected at: ${result.detectedAt}`,
-    ].join("\n");
-
-    const reportUrl = URL.createObjectURL(new Blob([report], { type: "text/plain" }));
-    const link = document.createElement("a");
-    link.href = reportUrl;
-    link.download = "traffic-sign-report.txt";
-    link.click();
-    URL.revokeObjectURL(reportUrl);
+    downloadReportPdf(
+      { ...result, user: result.requestedBy, status: "Completed" },
+      "traffic-sign-report.pdf"
+    );
   }
 
   if (!currentUser) {
