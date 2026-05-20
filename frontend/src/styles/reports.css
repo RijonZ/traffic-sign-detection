@@ -50,8 +50,45 @@
   line-height: 1.5;
 }
 
+.admin-report-layout {
+  align-items: flex-start;
+  display: grid;
+  gap: 24px;
+  grid-template-columns: 1.5fr 0.8fr;
+}
+
+.admin-report-row {
+  align-items: center;
+  border-top: 1px solid #e5e7eb;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 1fr 1.4fr 1fr 1.2fr 1fr auto;
+  padding: 16px 20px;
+}
+
+.admin-report-row:first-child {
+  border-top: none;
+}
+
+.admin-report-row p {
+  color: #4b5563;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.admin-report-head {
+  background-color: #f8fafc;
+  font-weight: 700;
+}
+
+.admin-report-head p {
+  color: #1f2937;
+}
+
 @media (max-width: 768px) {
   .reports-layout,
+  .admin-report-layout,
+  .admin-report-row,
   .report-row {
     grid-template-columns: 1fr;
   }

@@ -11,6 +11,7 @@ import FeaturesPage from "./pages/FeaturesPage";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import MyReports from "./pages/MyReports";
+import Reports from "./pages/Reports";
 import UsersPage from "./pages/UsersPage";
 
 const ADMIN_USER = {
@@ -32,7 +33,6 @@ const SESSION_KEY = "traffic-sign-session";
 const DEFAULT_USERS = [ADMIN_USER, MANAGER_USER];
 
 const blankPages = {
-  reports: "Reports",
   "model-monitoring": "Model Monitoring",
   "audit-logs": "Audit Logs",
   "export-data": "Export Data",
@@ -216,6 +216,16 @@ function App() {
   if (page === "all-detections") {
     return (
       <AllDetections
+        currentUser={currentUser}
+        onLogout={logout}
+        onNavigate={navigate}
+      />
+    );
+  }
+
+  if (page === "reports") {
+    return (
+      <Reports
         currentUser={currentUser}
         onLogout={logout}
         onNavigate={navigate}
