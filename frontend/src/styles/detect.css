@@ -1,0 +1,132 @@
+.detect-header {
+  align-items: center;
+  display: flex;
+  gap: 24px;
+  justify-content: space-between;
+  margin-bottom: 28px;
+}
+
+.detect-header h1 {
+  font-size: 36px;
+  line-height: 1.15;
+  margin: 0 0 8px;
+}
+
+.detect-header p {
+  color: #4b5563;
+  line-height: 1.5;
+  margin: 0;
+  max-width: 720px;
+}
+
+.detect-layout {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: 1.1fr 0.9fr;
+}
+
+.detect-panel {
+  background-color: white;
+  border: 1px solid #e8edf5;
+  border-radius: 8px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+  padding: 24px;
+}
+
+.detect-panel h3 {
+  margin-top: 0;
+}
+
+.upload-box {
+  align-items: center;
+  background-color: #f8fafc;
+  border: 1px dashed #93a4bd;
+  border-radius: 8px;
+  box-sizing: border-box;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  min-height: 92px;
+  padding: 18px;
+  text-align: center;
+  width: 100%;
+}
+
+.upload-box input {
+  display: none;
+}
+
+.upload-box span {
+  color: #374151;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.image-preview,
+.empty-preview {
+  aspect-ratio: 16 / 10;
+  border-radius: 8px;
+  margin: 18px 0;
+  width: 100%;
+}
+
+.image-preview {
+  border: 1px solid #e5e7eb;
+  object-fit: contain;
+}
+
+.empty-preview {
+  align-items: center;
+  background-color: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  color: #6b7280;
+  display: flex;
+  justify-content: center;
+}
+
+.result-box {
+  background-color: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.result-box h2 {
+  margin: 0 0 8px;
+}
+
+.result-box p,
+.result-box strong,
+.result-box span {
+  display: block;
+  margin-bottom: 12px;
+}
+
+.result-box p,
+.result-box span {
+  color: #4b5563;
+}
+
+.detect-flow {
+  margin-top: 24px;
+}
+
+.workflow-step.step-done {
+  background-color: #ecfdf5;
+  border-color: #bbf7d0;
+}
+
+.workflow-step.step-done span {
+  background-color: #15803d;
+}
+
+@media (max-width: 768px) {
+  .detect-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .detect-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

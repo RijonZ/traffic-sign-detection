@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Navbar from "../shared/Navbar";
+import "../styles/auth.css";
 
 function LoginPage({ currentUser, onLogin, onLogout, onNavigate, onSignUp }) {
   const [loginEmail, setLoginEmail] = useState("");

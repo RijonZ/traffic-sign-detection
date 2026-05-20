@@ -1,4 +1,6 @@
 import Navbar from "../shared/Navbar";
+import "../styles/auth.css";
+import "../styles/dashboard.css";
 
 function DashboardPage({ currentUser, onLogout, onNavigate }) {
   if (!currentUser) {

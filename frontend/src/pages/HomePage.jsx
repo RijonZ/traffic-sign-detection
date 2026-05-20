@@ -1,4 +1,5 @@
 import Navbar from "../shared/Navbar";
+import "../styles/home.css";
 
 function HomePage({ currentUser, onLogout, onNavigate }) {
   return (

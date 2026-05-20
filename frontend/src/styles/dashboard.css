@@ -1,0 +1,76 @@
+.dashboard-header {
+  align-items: center;
+  display: flex;
+  gap: 24px;
+  justify-content: space-between;
+  margin-bottom: 28px;
+}
+
+.dashboard-header h1 {
+  font-size: 36px;
+  line-height: 1.15;
+  margin: 0 0 8px;
+}
+
+.dashboard-header p,
+.dashboard-card p {
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.dashboard-grid {
+  display: grid;
+  gap: 22px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.dashboard-card {
+  background-color: white;
+  border: 1px solid #e8edf5;
+  border-radius: 8px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+  padding: 24px;
+}
+
+.dashboard-card h3 {
+  margin-top: 0;
+}
+
+.metric-value {
+  font-size: 30px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.activity-panel {
+  align-items: center;
+  background-color: white;
+  border: 1px solid #e8edf5;
+  border-radius: 8px;
+  display: flex;
+  gap: 20px;
+  justify-content: space-between;
+  margin-top: 24px;
+  padding: 24px;
+}
+
+.activity-panel h3 {
+  margin: 0 0 8px;
+}
+
+.activity-panel p {
+  color: #4b5563;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-header,
+  .activity-panel {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

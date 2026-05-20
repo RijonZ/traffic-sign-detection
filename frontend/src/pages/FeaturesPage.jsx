@@ -1,4 +1,5 @@
 import Navbar from "../shared/Navbar";
+import "../styles/features.css";
 
 const userBenefits = [
   {

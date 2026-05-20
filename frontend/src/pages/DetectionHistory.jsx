@@ -1,4 +1,6 @@
 import Navbar from "../shared/Navbar";
+import "../styles/dashboard.css";
+import "../styles/history.css";
 
 const detections = [
   {

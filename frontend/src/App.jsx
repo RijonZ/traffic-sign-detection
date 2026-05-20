@@ -1,12 +1,16 @@
 import { useEffect, useState } from "react";
-import "./Home.css";
+import "./styles/global.css";
+import AdminDashboard from "./pages/AdminDashboard";
 import BlankPage from "./pages/BlankPage";
+import DashboardAnalytics from "./pages/DashboardAnalytics";
 import DashboardPage from "./pages/DashboardPage";
 import DetectSignPage from "./pages/DetectSignPage";
 import DetectionHistory from "./pages/DetectionHistory";
 import FeaturesPage from "./pages/FeaturesPage";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
+import MyReports from "./pages/MyReports";
+import UsersPage from "./pages/UsersPage";
 
 const ADMIN_USER = {
   name: "Admin",
@@ -27,15 +31,11 @@ const SESSION_KEY = "traffic-sign-session";
 const DEFAULT_USERS = [ADMIN_USER, MANAGER_USER];
 
 const blankPages = {
-  "admin-dashboard": "Admin Dashboard",
   "all-detections": "All Detections",
-  users: "Users",
   reports: "Reports",
   "model-monitoring": "Model Monitoring",
   "audit-logs": "Audit Logs",
-  "dashboard-analytics": "Dashboard Analytics",
   "export-data": "Export Data",
-  "my-reports": "My Reports",
 };
 
 function readUsers() {
@@ -193,6 +193,26 @@ function App() {
     );
   }
 
+  if (page === "admin-dashboard") {
+    return (
+      <AdminDashboard
+        currentUser={currentUser}
+        onLogout={logout}
+        onNavigate={navigate}
+      />
+    );
+  }
+
+  if (page === "users") {
+    return (
+      <UsersPage
+        currentUser={currentUser}
+        onLogout={logout}
+        onNavigate={navigate}
+      />
+    );
+  }
+
   if (page === "detect") {
     return (
       <DetectSignPage
@@ -216,6 +236,26 @@ function App() {
   if (page === "history") {
     return (
       <DetectionHistory
+        currentUser={currentUser}
+        onLogout={logout}
+        onNavigate={navigate}
+      />
+    );
+  }
+
+  if (page === "my-reports") {
+    return (
+      <MyReports
+        currentUser={currentUser}
+        onLogout={logout}
+        onNavigate={navigate}
+      />
+    );
+  }
+
+  if (page === "dashboard-analytics") {
+    return (
+      <DashboardAnalytics
         currentUser={currentUser}
         onLogout={logout}
         onNavigate={navigate}

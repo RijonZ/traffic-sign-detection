@@ -1,0 +1,101 @@
+.features-header {
+  max-width: 760px;
+  margin-bottom: 28px;
+}
+
+.features-header h1 {
+  font-size: 40px;
+  line-height: 1.15;
+  margin: 0 0 12px;
+}
+
+.features-header p,
+.feature-section p,
+.role-card p,
+.feature-card p {
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.features-grid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.feature-card,
+.role-card {
+  background-color: white;
+  border: 1px solid #e8edf5;
+  border-radius: 8px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.04);
+  padding: 24px;
+}
+
+.feature-card h3,
+.role-card h3 {
+  margin-top: 0;
+}
+
+.feature-section {
+  align-items: flex-start;
+  background-color: white;
+  border: 1px solid #e8edf5;
+  border-radius: 8px;
+  display: grid;
+  gap: 28px;
+  grid-template-columns: 1fr 1fr;
+  margin-top: 26px;
+  padding: 28px;
+}
+
+.feature-section h2 {
+  font-size: 28px;
+  margin: 0 0 10px;
+}
+
+.workflow-list {
+  display: grid;
+  gap: 12px;
+}
+
+.workflow-step {
+  align-items: center;
+  background-color: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  display: flex;
+  gap: 14px;
+  padding: 12px;
+}
+
+.workflow-step span {
+  align-items: center;
+  background-color: #2563eb;
+  border-radius: 50%;
+  color: white;
+  display: flex;
+  font-weight: 700;
+  height: 30px;
+  justify-content: center;
+  width: 30px;
+}
+
+.workflow-step p {
+  margin: 0;
+}
+
+.role-section {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 26px;
+}
+
+@media (max-width: 768px) {
+  .features-grid,
+  .feature-section,
+  .role-section {
+    grid-template-columns: 1fr;
+  }
+}

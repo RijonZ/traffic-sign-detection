@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Navbar from "../shared/Navbar";
+import "../styles/auth.css";
+import "../styles/dashboard.css";
+import "../styles/detect.css";
+import "../styles/features.css";
 
 const HISTORY_KEY = "traffic-sign-detections";
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
