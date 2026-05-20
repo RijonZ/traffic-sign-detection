@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import "./styles/global.css";
 import AdminDashboard from "./pages/AdminDashboard";
+import AllDetections from "./pages/AllDetections";
 import BlankPage from "./pages/BlankPage";
 import DashboardAnalytics from "./pages/DashboardAnalytics";
 import DashboardPage from "./pages/DashboardPage";
@@ -31,7 +32,6 @@ const SESSION_KEY = "traffic-sign-session";
 const DEFAULT_USERS = [ADMIN_USER, MANAGER_USER];
 
 const blankPages = {
-  "all-detections": "All Detections",
   reports: "Reports",
   "model-monitoring": "Model Monitoring",
   "audit-logs": "Audit Logs",
@@ -206,6 +206,16 @@ function App() {
   if (page === "users") {
     return (
       <UsersPage
+        currentUser={currentUser}
+        onLogout={logout}
+        onNavigate={navigate}
+      />
+    );
+  }
+
+  if (page === "all-detections") {
+    return (
+      <AllDetections
         currentUser={currentUser}
         onLogout={logout}
         onNavigate={navigate}
