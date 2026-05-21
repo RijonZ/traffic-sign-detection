@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import "./styles/global.css";
 import AdminDashboard from "./pages/AdminDashboard";
+import AuditLogs from "./pages/AuditLogs";
 import AllDetections from "./pages/AllDetections";
 import BlankPage from "./pages/BlankPage";
 import DashboardAnalytics from "./pages/DashboardAnalytics";
@@ -11,6 +12,7 @@ import ExportData from "./pages/ExportData";
 import FeaturesPage from "./pages/FeaturesPage";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
+import ModelMonitoring from "./pages/ModelMonitoring";
 import MyReports from "./pages/MyReports";
 import PaymentPage from "./pages/PaymentPage";
 import Reports from "./pages/Reports";
@@ -34,10 +36,7 @@ const USERS_KEY = "traffic-sign-users";
 const SESSION_KEY = "traffic-sign-session";
 const DEFAULT_USERS = [ADMIN_USER, MANAGER_USER];
 
-const blankPages = {
-  "model-monitoring": "Model Monitoring",
-  "audit-logs": "Audit Logs",
-};
+const blankPages = {};
 
 function readUsers() {
   const savedUsers = JSON.parse(localStorage.getItem(USERS_KEY) || "[]");
@@ -227,6 +226,26 @@ function App() {
   if (page === "reports") {
     return (
       <Reports
+        currentUser={currentUser}
+        onLogout={logout}
+        onNavigate={navigate}
+      />
+    );
+  }
+
+  if (page === "model-monitoring") {
+    return (
+      <ModelMonitoring
+        currentUser={currentUser}
+        onLogout={logout}
+        onNavigate={navigate}
+      />
+    );
+  }
+
+  if (page === "audit-logs") {
+    return (
+      <AuditLogs
         currentUser={currentUser}
         onLogout={logout}
         onNavigate={navigate}

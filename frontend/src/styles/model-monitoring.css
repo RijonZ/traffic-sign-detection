@@ -1,0 +1,82 @@
+.monitoring-layout {
+  align-items: flex-start;
+  display: grid;
+  gap: 24px;
+  grid-template-columns: 1fr 1fr;
+  margin-top: 24px;
+}
+
+.monitoring-panel {
+  background-color: white;
+  border: 1px solid #e8edf5;
+  border-radius: 8px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+  padding: 24px;
+}
+
+.monitoring-checks,
+.monitoring-bars {
+  display: grid;
+  gap: 14px;
+}
+
+.monitoring-check {
+  align-items: flex-start;
+  background-color: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+  padding: 14px;
+}
+
+.monitoring-check p {
+  color: #4b5563;
+  line-height: 1.5;
+  margin: 8px 0 0;
+}
+
+.monitoring-check .status-pill {
+  margin-bottom: 0;
+  white-space: nowrap;
+}
+
+.monitoring-bar-row {
+  display: grid;
+  gap: 10px;
+}
+
+.monitoring-bar-row div:first-child {
+  display: flex;
+  justify-content: space-between;
+}
+
+.monitoring-bar-row span {
+  color: #4b5563;
+}
+
+.monitoring-bar-track {
+  background-color: #e5e7eb;
+  border-radius: 999px;
+  height: 10px;
+  overflow: hidden;
+}
+
+.monitoring-bar-fill {
+  background-color: #2563eb;
+  border-radius: 999px;
+  height: 100%;
+}
+
+@media (max-width: 768px) {
+  .monitoring-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .monitoring-check,
+  .monitoring-bar-row div:first-child {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
