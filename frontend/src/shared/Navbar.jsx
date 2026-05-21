@@ -15,6 +15,7 @@ const userLinks = [
   { label: "Detect Sign", page: "detect" },
   { label: "Detection History", page: "history" },
   { label: "My Reports", page: "my-reports" },
+  { label: "Subscription", page: "subscription" },
 ];
 
 const managerLinks = [
@@ -24,6 +25,7 @@ const managerLinks = [
   { label: "Reports", page: "reports" },
   { label: "All Detections", page: "all-detections" },
   { label: "Export Data", page: "export-data" },
+  { label: "Subscription", page: "subscription" },
 ];
 
 const adminLinks = [

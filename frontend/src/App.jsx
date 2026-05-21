@@ -12,6 +12,7 @@ import FeaturesPage from "./pages/FeaturesPage";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import MyReports from "./pages/MyReports";
+import PaymentPage from "./pages/PaymentPage";
 import Reports from "./pages/Reports";
 import UsersPage from "./pages/UsersPage";
 
@@ -286,6 +287,16 @@ function App() {
   if (page === "export-data") {
     return (
       <ExportData
+        currentUser={currentUser}
+        onLogout={logout}
+        onNavigate={navigate}
+      />
+    );
+  }
+
+  if (page === "subscription" || page === "payment") {
+    return (
+      <PaymentPage
         currentUser={currentUser}
         onLogout={logout}
         onNavigate={navigate}
