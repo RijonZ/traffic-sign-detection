@@ -1,8 +1,26 @@
+import { useEffect, useState } from "react";
 import Navbar from "../shared/Navbar";
 import "../styles/auth.css";
 import "../styles/dashboard.css";
 
+const API_BASE_URL = "http://localhost:5000/api";
+
 function DashboardPage({ currentUser, onLogout, onNavigate }) {
+  const [dashboardData, setDashboardData] = useState(null);
+
+  useEffect(() => {
+    if (!currentUser) {
+      return;
+    }
+
+    fetch(`${API_BASE_URL}/users/${encodeURIComponent(currentUser.email)}/dashboard`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => setDashboardData(data))
+      .catch(() => setDashboardData(null));
+  }, [currentUser]);
+
+  const summary = dashboardData?.summary;
+
   if (!currentUser) {
     return (
       <div className="home">
@@ -43,12 +61,12 @@ function DashboardPage({ currentUser, onLogout, onNavigate }) {
         <section className="dashboard-grid">
           <div className="dashboard-card">
             <h3>Current Status</h3>
-            <p>Ready for the next image upload.</p>
+            <p>{summary?.currentStatus || "Ready for the next image upload."}</p>
           </div>
 
           <div className="dashboard-card">
             <h3>Latest Result</h3>
-            <p>Prediction results will appear here after analysis.</p>
+            <p>{summary?.latestResult || "Prediction results will appear here after analysis."}</p>
           </div>
 
           <div className="dashboard-card">
@@ -60,7 +78,15 @@ function DashboardPage({ currentUser, onLogout, onNavigate }) {
         <section className="activity-panel">
           <div>
             <h3>Recent Activity</h3>
-            <p>No recent detections yet.</p>
+            {summary?.recentActivity?.length ? (
+              summary.recentActivity.map((item) => (
+                <p key={item.id}>
+                  {item.sign} from {item.fileName} - {item.status}
+                </p>
+              ))
+            ) : (
+              <p>No recent detections yet.</p>
+            )}
           </div>
           <button className="secondary-btn" onClick={() => onNavigate("history")}>
             View History

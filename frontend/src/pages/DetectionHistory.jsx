@@ -1,8 +1,12 @@
+import { useEffect, useState } from "react";
 import Navbar from "../shared/Navbar";
+import "../styles/auth.css";
 import "../styles/dashboard.css";
 import "../styles/history.css";
 
-const detections = [
+const API_BASE_URL = "http://localhost:5000/api";
+
+const sampleDetections = [
   {
     id: "REQ-1001",
     imageName: "road-crossing.jpg",
@@ -37,7 +41,52 @@ const detections = [
   },
 ];
 
+function formatDetection(item) {
+  return {
+    id: item.id,
+    imageName: item.imageName || item.fileName,
+    sign: item.sign,
+    confidence: item.confidence === 0 ? "-" : `${item.confidence}%`,
+    status: item.status,
+    date: item.date || item.detectedAt,
+  };
+}
+
 function DetectionHistory({ currentUser, onLogout, onNavigate }) {
+  const [detections, setDetections] = useState(sampleDetections);
+
+  useEffect(() => {
+    if (!currentUser) {
+      return;
+    }
+
+    fetch(`${API_BASE_URL}/users/${encodeURIComponent(currentUser.email)}/detections`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (data?.detections?.length) {
+          setDetections(data.detections.map(formatDetection));
+        }
+      })
+      .catch(() => setDetections(sampleDetections));
+  }, [currentUser]);
+
+  if (!currentUser) {
+    return (
+      <div className="home">
+        <Navbar onNavigate={onNavigate} />
+        <main className="page-shell">
+          <section className="auth-card">
+            <h1>Sign in required</h1>
+            <p>You need an account before opening detection history.</p>
+            <button className="primary-btn" onClick={() => onNavigate("login")}>
+              Go to login
+            </button>
+          </section>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="home">
       <Navbar
