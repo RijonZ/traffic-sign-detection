@@ -30,7 +30,7 @@
   flex-direction: column;
   gap: 28px;
   left: 0;
-  overflow-y: auto;
+  overflow-y: visible;
   padding: 24px 18px;
   position: fixed;
   top: 0;
@@ -100,6 +100,99 @@ button:disabled {
   background-color: #111827;
   color: white;
   margin-top: 8px;
+}
+
+.notification-box {
+  position: relative;
+}
+
+.notification-btn {
+  align-items: center;
+  background-color: #eef2f7;
+  color: #111827;
+  display: inline-flex;
+  gap: 8px;
+  justify-content: center;
+  width: 100%;
+}
+
+.notification-btn svg {
+  fill: none;
+  height: 20px;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+  width: 20px;
+}
+
+.notification-btn span {
+  align-items: center;
+  background-color: #2563eb;
+  border-radius: 999px;
+  color: white;
+  display: inline-flex;
+  font-size: 12px;
+  height: 20px;
+  justify-content: center;
+  min-width: 20px;
+  padding: 0 6px;
+}
+
+.notification-menu {
+  background-color: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+  left: 0;
+  padding: 14px;
+  position: absolute;
+  top: calc(100% + 8px);
+  width: 270px;
+  z-index: 20;
+}
+
+.sidebar-navbar .notification-menu {
+  left: calc(100% + 12px);
+  top: 0;
+  width: 330px;
+}
+
+.notification-menu h3 {
+  font-size: 16px;
+  margin: 0 0 10px;
+}
+
+.notification-item {
+  background: none;
+  border-radius: 6px;
+  display: block;
+  padding: 10px;
+  text-align: left;
+  width: 100%;
+}
+
+.notification-item:hover {
+  background-color: #f3f6fb;
+}
+
+.notification-item.is-read {
+  opacity: 0.62;
+}
+
+.notification-item strong,
+.notification-item span {
+  display: block;
+}
+
+.notification-item span {
+  color: #4b5563;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.4;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .primary-btn {
@@ -176,6 +269,16 @@ button:disabled {
     padding: 16px 5%;
     position: static;
     width: 100%;
+  }
+
+  .sidebar-navbar {
+    overflow-y: visible;
+  }
+
+  .sidebar-navbar .notification-menu {
+    left: 0;
+    top: calc(100% + 8px);
+    width: min(330px, 90vw);
   }
 
   .nav-links {
