@@ -8,6 +8,7 @@ import "../styles/features.css";
 
 const HISTORY_KEY = "traffic-sign-detections";
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const API_BASE_URL = "http://localhost:5000/api";
 
 const samplePredictions = [
   { sign: "Stop Sign", category: "Regulatory", confidence: 96, box: "x: 124, y: 88, w: 210, h: 210" },
@@ -105,6 +106,55 @@ function DetectSignPage({ currentUser, onLogout, onNavigate }) {
     setPreview(selectedFile && !validationMessage ? URL.createObjectURL(selectedFile) : "");
   }
 
+  function saveDetectionResult(completedResult) {
+    const nextHistory = [completedResult, ...history].slice(0, 5);
+
+    setResult(completedResult);
+    setHistory(nextHistory);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(nextHistory));
+  }
+
+  async function requestBackendDetection() {
+    const response = await fetch(`${API_BASE_URL}/detect-sign`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userEmail: currentUser.email,
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+      }),
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Detection request failed.");
+    }
+
+    return data.detection;
+  }
+
+  function buildLocalDetection() {
+    const prediction = samplePredictions[file.name.length % samplePredictions.length];
+
+    return {
+      id: Date.now(),
+      fileName: file.name,
+      requestedBy: currentUser.name,
+      detectedAt: new Date().toLocaleString(),
+      status: "Completed",
+      ...prediction,
+    };
+  }
+
+  function formatBackendDetection(detection) {
+    return {
+      ...detection,
+      requestedBy: currentUser.name,
+      box: detection.box || "Saved by backend",
+    };
+  }
+
   function runDetection() {
     const validationMessage = validateFile(file);
 
@@ -125,20 +175,13 @@ function DetectSignPage({ currentUser, onLogout, onNavigate }) {
     );
 
     timers.current.push(
-      setTimeout(() => {
-        const prediction = samplePredictions[file.name.length % samplePredictions.length];
-        const completedResult = {
-          id: Date.now(),
-          fileName: file.name,
-          requestedBy: currentUser.name,
-          detectedAt: new Date().toLocaleString(),
-          ...prediction,
-        };
-        const nextHistory = [completedResult, ...history].slice(0, 5);
-
-        setResult(completedResult);
-        setHistory(nextHistory);
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(nextHistory));
+      setTimeout(async () => {
+        try {
+          const backendDetection = await requestBackendDetection();
+          saveDetectionResult(formatBackendDetection(backendDetection));
+        } catch (requestError) {
+          saveDetectionResult(buildLocalDetection());
+        }
       }, 3400)
     );
   }

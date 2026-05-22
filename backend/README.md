@@ -27,6 +27,8 @@ http://localhost:5000
 GET  /api/health
 POST /api/auth/login
 POST /api/chat
+GET  /api/detect-sign?userEmail=:email
+POST /api/detect-sign
 GET  /api/admin/model-monitoring?adminEmail=:email
 GET  /api/admin/reports?adminEmail=:email
 GET  /api/users/:email/dashboard
@@ -48,13 +50,16 @@ GET  /api/users/:email/reports
 
 ```json
 {
+  "userEmail": "user@trafficsign.ai",
   "fileName": "road-image.jpg",
-  "sign": "Stop Sign",
-  "category": "Regulatory",
-  "confidence": 96,
-  "status": "Completed"
+  "fileType": "image/jpeg",
+  "fileSize": 420000
 }
 ```
+
+`POST /api/detect-sign` validates the image metadata, creates a demo traffic sign
+prediction, stores the detection request in memory, and returns the completed
+workflow result used by the Detect Sign frontend page.
 
 ## Example Chat Body
 
