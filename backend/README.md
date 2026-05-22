@@ -26,6 +26,7 @@ http://localhost:5000
 ```text
 GET  /api/health
 POST /api/auth/login
+POST /api/chat
 GET  /api/admin/model-monitoring?adminEmail=:email
 GET  /api/admin/reports?adminEmail=:email
 GET  /api/users/:email/dashboard
@@ -52,6 +53,18 @@ GET  /api/users/:email/reports
   "category": "Regulatory",
   "confidence": 96,
   "status": "Completed"
+}
+```
+
+## Example Chat Body
+
+```json
+{
+  "message": "What does confidence mean?",
+  "user": {
+    "email": "user@trafficsign.ai",
+    "role": "User"
+  }
 }
 ```
 

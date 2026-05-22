@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import ChatBot from "./ChatBot";
 
 const READ_NOTIFICATIONS_KEY = "traffic-sign-read-notifications";
 
@@ -159,6 +160,8 @@ function Navbar({ currentUser, onLogout, onNavigate }) {
 
         {currentUser && <button onClick={onLogout}>Logout</button>}
       </div>
+
+      {currentUser && <ChatBot currentUser={currentUser} />}
     </nav>
   );
 }

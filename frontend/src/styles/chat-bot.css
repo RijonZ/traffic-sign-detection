@@ -1,0 +1,148 @@
+.chat-widget {
+  --chat-panel-width: 360px;
+  --chat-button-width: 96px;
+  bottom: 24px;
+  position: fixed;
+  right: 24px;
+  z-index: 50;
+}
+
+.chat-toggle {
+  border-radius: 999px;
+  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.26);
+  padding: 12px 22px;
+  transition: transform 220ms ease;
+  width: var(--chat-button-width);
+}
+
+.chat-widget.open .chat-toggle {
+  transform: translateX(calc((var(--chat-panel-width) - var(--chat-button-width)) * -1));
+}
+
+.chat-toggle.nudge {
+  animation: chatNudge 900ms ease;
+}
+
+.chat-panel {
+  background-color: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
+  margin-bottom: 12px;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  position: absolute;
+  bottom: calc(100% + 12px);
+  right: 0;
+  transform: translateY(12px) scale(0.97);
+  transform-origin: bottom right;
+  transition: opacity 220ms ease, transform 220ms ease;
+  width: var(--chat-panel-width);
+}
+
+.chat-panel.open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+}
+
+.chat-header {
+  align-items: center;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  padding: 16px;
+}
+
+.chat-header h3 {
+  margin: 0;
+}
+
+.chat-header .text-btn {
+  margin: 0;
+  width: auto;
+}
+
+.chat-messages {
+  display: grid;
+  gap: 10px;
+  max-height: 330px;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.chat-message {
+  border-radius: 8px;
+  line-height: 1.45;
+  margin: 0;
+  max-width: 88%;
+  padding: 10px 12px;
+}
+
+.chat-message.bot {
+  background-color: #f3f6fb;
+  color: #1f2937;
+}
+
+.chat-message.user {
+  background-color: #2563eb;
+  color: white;
+  justify-self: end;
+}
+
+.chat-form {
+  border-top: 1px solid #e5e7eb;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr auto;
+  padding: 12px;
+}
+
+.chat-form input {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font: inherit;
+  padding: 10px;
+}
+
+@media (max-width: 768px) {
+  .chat-widget {
+    bottom: 16px;
+    left: 16px;
+    right: 16px;
+  }
+
+  .chat-widget.open .chat-toggle {
+    transform: none;
+  }
+
+  .chat-panel {
+    left: 0;
+    right: 0;
+    width: 100%;
+  }
+}
+
+@keyframes chatNudge {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  20% {
+    transform: translateX(-4px);
+  }
+
+  40% {
+    transform: translateX(4px);
+  }
+
+  60% {
+    transform: translateX(-3px);
+  }
+
+  80% {
+    transform: translateX(3px);
+  }
+}
