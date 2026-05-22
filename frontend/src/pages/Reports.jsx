@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Navbar from "../shared/Navbar";
 import { downloadReportPdf } from "../utils/reportPdf";
 import "../styles/auth.css";
@@ -7,6 +7,7 @@ import "../styles/history.css";
 import "../styles/reports.css";
 
 const HISTORY_KEY = "traffic-sign-detections";
+const API_BASE_URL = "http://localhost:5000/api";
 
 const sampleReports = [
   {
@@ -61,14 +62,37 @@ function readReports() {
 }
 
 function Reports({ currentUser, onLogout, onNavigate }) {
-  const reports = useMemo(readReports, []);
-  const [selectedReport, setSelectedReport] = useState(reports[0]);
+  const fallbackReports = useMemo(readReports, []);
+  const [reports, setReports] = useState(fallbackReports);
+  const [selectedReport, setSelectedReport] = useState(fallbackReports[0]);
+
+  useEffect(() => {
+    if (!currentUser || currentUser.role !== "Administrator") {
+      return;
+    }
+
+    fetch(`${API_BASE_URL}/admin/reports?adminEmail=${encodeURIComponent(currentUser.email)}`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (data?.reports?.length) {
+          setReports(data.reports);
+          setSelectedReport(data.reports[0]);
+        }
+      })
+      .catch(() => {
+        setReports(fallbackReports);
+        setSelectedReport(fallbackReports[0]);
+      });
+  }, [currentUser, fallbackReports]);
 
   const completed = reports.filter((report) => report.status === "Completed").length;
   const rejected = reports.filter((report) => report.status === "Rejected").length;
-  const averageConfidence = Math.round(
-    reports.reduce((total, report) => total + Number(report.confidence || 0), 0) / reports.length
-  );
+  const averageConfidence = reports.length
+    ? Math.round(
+        reports.reduce((total, report) => total + Number(report.confidence || 0), 0) /
+          reports.length
+      )
+    : 0;
 
   function downloadReport(report) {
     downloadReportPdf(
@@ -172,17 +196,23 @@ function Reports({ currentUser, onLogout, onNavigate }) {
 
           <aside className="report-detail">
             <span className="eyebrow">Selected report</span>
-            <h2>{selectedReport.id}</h2>
-            <p><strong>Image:</strong> {selectedReport.fileName}</p>
-            <p><strong>User:</strong> {selectedReport.requestedBy}</p>
-            <p><strong>Detected sign:</strong> {selectedReport.sign}</p>
-            <p><strong>Category:</strong> {selectedReport.category}</p>
-            <p><strong>Confidence:</strong> {selectedReport.confidence}%</p>
-            <p><strong>Status:</strong> {selectedReport.status}</p>
-            <p><strong>Date:</strong> {selectedReport.createdAt}</p>
-            <button className="primary-btn full-width" onClick={() => downloadReport(selectedReport)}>
-              Download Report
-            </button>
+            {selectedReport ? (
+              <>
+                <h2>{selectedReport.id}</h2>
+                <p><strong>Image:</strong> {selectedReport.fileName}</p>
+                <p><strong>User:</strong> {selectedReport.requestedBy}</p>
+                <p><strong>Detected sign:</strong> {selectedReport.sign}</p>
+                <p><strong>Category:</strong> {selectedReport.category}</p>
+                <p><strong>Confidence:</strong> {selectedReport.confidence}%</p>
+                <p><strong>Status:</strong> {selectedReport.status}</p>
+                <p><strong>Date:</strong> {selectedReport.createdAt}</p>
+                <button className="primary-btn full-width" onClick={() => downloadReport(selectedReport)}>
+                  Download Report
+                </button>
+              </>
+            ) : (
+              <p>No reports available.</p>
+            )}
           </aside>
         </section>
 

@@ -1,4 +1,5 @@
 const { login } = require("../controllers/authController");
+const { getAdminReports, getModelMonitoring } = require("../controllers/adminController");
 const {
   getDashboard,
   getDetections,
@@ -10,6 +11,8 @@ const { sendJson, sendOptions, notFound } = require("../utils/http");
 const routes = [
   { method: "GET", path: /^\/api\/health$/, handler: (_, response) => sendJson(response, 200, { ok: true }) },
   { method: "POST", path: /^\/api\/auth\/login$/, handler: login },
+  { method: "GET", path: /^\/api\/admin\/model-monitoring$/, handler: getModelMonitoring },
+  { method: "GET", path: /^\/api\/admin\/reports$/, handler: getAdminReports },
   { method: "GET", path: /^\/api\/users\/([^/]+)\/dashboard$/, handler: getDashboard },
   { method: "GET", path: /^\/api\/users\/([^/]+)\/detections$/, handler: getDetections },
   { method: "POST", path: /^\/api\/users\/([^/]+)\/detections$/, handler: createDetection },

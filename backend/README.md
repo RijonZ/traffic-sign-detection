@@ -26,6 +26,8 @@ http://localhost:5000
 ```text
 GET  /api/health
 POST /api/auth/login
+GET  /api/admin/model-monitoring?adminEmail=:email
+GET  /api/admin/reports?adminEmail=:email
 GET  /api/users/:email/dashboard
 GET  /api/users/:email/detections
 POST /api/users/:email/detections
