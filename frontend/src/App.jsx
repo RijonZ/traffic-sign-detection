@@ -16,6 +16,7 @@ import ModelMonitoring from "./pages/ModelMonitoring";
 import MyReports from "./pages/MyReports";
 import PaymentPage from "./pages/PaymentPage";
 import Reports from "./pages/Reports";
+import SettingsPage from "./pages/SettingsPage";
 import UsersPage from "./pages/UsersPage";
 
 const ADMIN_USER = {
@@ -246,6 +247,16 @@ function App() {
   if (page === "audit-logs") {
     return (
       <AuditLogs
+        currentUser={currentUser}
+        onLogout={logout}
+        onNavigate={navigate}
+      />
+    );
+  }
+
+  if (page === "settings") {
+    return (
+      <SettingsPage
         currentUser={currentUser}
         onLogout={logout}
         onNavigate={navigate}

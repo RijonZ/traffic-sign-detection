@@ -1,0 +1,121 @@
+.settings-layout {
+  align-items: flex-start;
+  display: grid;
+  gap: 24px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.settings-panel,
+.settings-actions {
+  background-color: white;
+  border: 1px solid #e8edf5;
+  border-radius: 8px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+  padding: 24px;
+}
+
+.settings-panel label {
+  display: block;
+  font-weight: 700;
+  margin: 18px 0 8px;
+}
+
+.settings-panel input[type="number"],
+.settings-panel input[type="text"],
+.settings-panel > input {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  box-sizing: border-box;
+  font: inherit;
+  padding: 12px;
+  width: 100%;
+}
+
+.settings-input-row {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.settings-input-row span {
+  color: #4b5563;
+  font-weight: 700;
+  min-width: 44px;
+}
+
+.settings-toggle {
+  align-items: center;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+  padding: 18px 0;
+}
+
+.settings-toggle:first-of-type {
+  margin-top: 18px;
+}
+
+.settings-toggle p,
+.settings-summary p,
+.settings-actions p {
+  color: #4b5563;
+  line-height: 1.5;
+  margin: 6px 0 0;
+}
+
+.settings-toggle input[type="checkbox"] {
+  height: 22px;
+  width: 22px;
+}
+
+.settings-summary p {
+  border-bottom: 1px solid #e5e7eb;
+  margin: 0;
+  padding: 12px 0;
+}
+
+.settings-summary p:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.settings-actions {
+  align-items: center;
+  display: flex;
+  gap: 20px;
+  grid-column: 1 / -1;
+  justify-content: space-between;
+}
+
+.settings-actions h3 {
+  margin: 0;
+}
+
+.settings-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.settings-message {
+  background-color: #ecfdf5;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  color: #166534;
+  font-weight: 700;
+  margin: 18px 0 0;
+  padding: 14px 16px;
+}
+
+@media (max-width: 768px) {
+  .settings-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-actions,
+  .settings-buttons {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

@@ -38,6 +38,7 @@ const adminLinks = [
   { label: "Reports", page: "reports" },
   { label: "Model Monitoring", page: "model-monitoring" },
   { label: "Audit Logs", page: "audit-logs" },
+  { label: "Settings", page: "settings" },
 ];
 
 const notificationsByRole = {
