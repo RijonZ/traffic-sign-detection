@@ -1,10 +1,11 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Navbar from "../shared/Navbar";
 import "../styles/auth.css";
 import "../styles/dashboard.css";
 import "../styles/users.css";
 
 const USERS_KEY = "traffic-sign-users";
+const API_BASE_URL = "http://localhost:5000/api";
 
 const defaultUsers = [
   { name: "Admin", email: "admin@trafficsign.ai", role: "Administrator" },
@@ -22,7 +23,24 @@ function readUsers() {
 }
 
 function UsersPage({ currentUser, onLogout, onNavigate }) {
-  const users = useMemo(readUsers, []);
+  const fallbackUsers = useMemo(readUsers, []);
+  const [users, setUsers] = useState(fallbackUsers);
+
+  useEffect(() => {
+    if (!currentUser || currentUser.role !== "Administrator") {
+      return;
+    }
+
+    fetch(`${API_BASE_URL}/admin/users?adminEmail=${encodeURIComponent(currentUser.email)}`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (data?.users?.length) {
+          setUsers(data.users);
+        }
+      })
+      .catch(() => setUsers(fallbackUsers));
+  }, [currentUser, fallbackUsers]);
+
   const admins = users.filter((user) => user.role === "Administrator").length;
   const managers = users.filter((user) => user.role === "Manager").length;
   const regularUsers = users.filter((user) => user.role === "User").length;
@@ -106,7 +124,7 @@ function UsersPage({ currentUser, onLogout, onNavigate }) {
               <p>{user.email}</p>
               <p>{user.role}</p>
               <p>
-                <span className="status-pill">Active</span>
+                <span className="status-pill">{user.status || "Active"}</span>
               </p>
             </div>
           ))}

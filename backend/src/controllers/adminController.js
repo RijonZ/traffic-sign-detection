@@ -1,6 +1,6 @@
 const { getModelMonitoringSummary } = require("../services/modelMonitoringService");
 const { getAllReports } = require("../services/reportService");
-const { findUserByEmail } = require("../services/userService");
+const { findUserByEmail, getAllUsers, getUsersSummary } = require("../services/userService");
 const { sendJson } = require("../utils/http");
 
 function getAdminUser(request) {
@@ -35,4 +35,15 @@ function getAdminReports(request, response) {
   sendJson(response, 200, getAllReports());
 }
 
-module.exports = { getAdminReports, getModelMonitoring };
+function getAdminUsers(request, response) {
+  if (!ensureAdministrator(request, response)) {
+    return;
+  }
+
+  sendJson(response, 200, {
+    users: getAllUsers(),
+    summary: getUsersSummary(),
+  });
+}
+
+module.exports = { getAdminReports, getAdminUsers, getModelMonitoring };
