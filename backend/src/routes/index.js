@@ -1,6 +1,11 @@
 const { login } = require("../controllers/authController");
 const { sendMessage } = require("../controllers/chatController");
-const { getAdminReports, getAdminUsers, getModelMonitoring } = require("../controllers/adminController");
+const {
+  getAdminAuditLogs,
+  getAdminReports,
+  getAdminUsers,
+  getModelMonitoring,
+} = require("../controllers/adminController");
 const {
   createDetectSignRequest,
   getDetectionHistory,
@@ -20,6 +25,7 @@ const routes = [
   { method: "GET", path: /^\/api\/detect-sign$/, handler: getDetectionHistory },
   { method: "POST", path: /^\/api\/detect-sign$/, handler: createDetectSignRequest },
   { method: "GET", path: /^\/api\/admin\/model-monitoring$/, handler: getModelMonitoring },
+  { method: "GET", path: /^\/api\/admin\/audit-logs$/, handler: getAdminAuditLogs },
   { method: "GET", path: /^\/api\/admin\/reports$/, handler: getAdminReports },
   { method: "GET", path: /^\/api\/admin\/users$/, handler: getAdminUsers },
   { method: "GET", path: /^\/api\/users\/([^/]+)\/dashboard$/, handler: getDashboard },

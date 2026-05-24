@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Navbar from "../shared/Navbar";
 import "../styles/audit-logs.css";
 import "../styles/auth.css";
@@ -6,6 +6,7 @@ import "../styles/dashboard.css";
 
 const USERS_KEY = "traffic-sign-users";
 const HISTORY_KEY = "traffic-sign-detections";
+const API_BASE_URL = "http://localhost:5000/api";
 
 const sampleLogs = [
   {
@@ -80,7 +81,24 @@ function buildAuditLogs() {
 }
 
 function AuditLogs({ currentUser, onLogout, onNavigate }) {
-  const logs = useMemo(buildAuditLogs, []);
+  const fallbackLogs = useMemo(buildAuditLogs, []);
+  const [logs, setLogs] = useState(fallbackLogs);
+
+  useEffect(() => {
+    if (!currentUser || currentUser.role !== "Administrator") {
+      return;
+    }
+
+    fetch(`${API_BASE_URL}/admin/audit-logs?adminEmail=${encodeURIComponent(currentUser.email)}`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (data?.logs?.length) {
+          setLogs(data.logs);
+        }
+      })
+      .catch(() => setLogs(fallbackLogs));
+  }, [currentUser, fallbackLogs]);
+
   const successLogs = logs.filter((log) => log.status === "Success" || log.status === "Completed").length;
   const reviewLogs = logs.filter((log) => log.status === "Review" || log.status === "Rejected").length;
   const modules = [...new Set(logs.map((log) => log.module))];
