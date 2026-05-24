@@ -11,9 +11,9 @@ function LoginPage({ currentUser, onLogin, onLogout, onNavigate, onSignUp }) {
   const [loginMessage, setLoginMessage] = useState("");
   const [signupMessage, setSignupMessage] = useState("");
 
-  function handleLogin(event) {
+  async function handleLogin(event) {
     event.preventDefault();
-    const result = onLogin(loginEmail, loginPassword);
+    const result = await onLogin(loginEmail, loginPassword);
 
     if (!result.ok) {
       setLoginMessage(result.message);

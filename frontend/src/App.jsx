@@ -67,6 +67,8 @@ function getRoleFromEmail(email) {
   return "User";
 }
 
+const API_BASE_URL = "http://localhost:5000/api";
+
 function App() {
   const [page, setPage] = useState(getPageFromHash);
   const [users, setUsers] = useState(readUsers);
@@ -104,28 +106,28 @@ function App() {
     return "dashboard";
   }
 
-  function login(email, password) {
-    const user = users.find(
-      (savedUser) =>
-        savedUser.email.toLowerCase() === email.toLowerCase() &&
-        savedUser.password === password
-    );
+  async function login(email, password) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        body: JSON.stringify({ email, password }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      });
+      const data = await response.json();
 
-    if (!user) {
-      return { ok: false, message: "Invalid email or password." };
+      if (!response.ok) {
+        return { ok: false, message: data.message || "Invalid email or password." };
+      }
+
+      const sessionUser = data.user;
+
+      setCurrentUser(sessionUser);
+      localStorage.setItem(SESSION_KEY, JSON.stringify(sessionUser));
+      navigate(getLandingPage(sessionUser.role));
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, message: "Backend is not available. Please try again later." };
     }
-
-    const role = getRoleFromEmail(user.email);
-    const sessionUser = {
-      email: user.email,
-      name: user.name,
-      role,
-    };
-
-    setCurrentUser(sessionUser);
-    localStorage.setItem(SESSION_KEY, JSON.stringify(sessionUser));
-    navigate(getLandingPage(role));
-    return { ok: true };
   }
 
   function signUp(name, email, password) {

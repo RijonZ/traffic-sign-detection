@@ -3,14 +3,14 @@ const { getAllReports } = require("../services/reportService");
 const { findUserByEmail, getAllUsers, getUsersSummary } = require("../services/userService");
 const { sendJson } = require("../utils/http");
 
-function getAdminUser(request) {
+async function getAdminUser(request) {
   const url = new URL(request.url, `http://${request.headers.host}`);
   const adminEmail = url.searchParams.get("adminEmail") || "";
   return findUserByEmail(adminEmail);
 }
 
-function ensureAdministrator(request, response) {
-  const user = getAdminUser(request);
+async function ensureAdministrator(request, response) {
+  const user = await getAdminUser(request);
   if (!user || user.role !== "Administrator") {
     sendJson(response, 403, { message: "Administrator access required." });
     return false;
@@ -19,30 +19,30 @@ function ensureAdministrator(request, response) {
   return true;
 }
 
-function getModelMonitoring(request, response) {
-  if (!ensureAdministrator(request, response)) {
+async function getModelMonitoring(request, response) {
+  if (!(await ensureAdministrator(request, response))) {
     return;
   }
 
   sendJson(response, 200, getModelMonitoringSummary());
 }
 
-function getAdminReports(request, response) {
-  if (!ensureAdministrator(request, response)) {
+async function getAdminReports(request, response) {
+  if (!(await ensureAdministrator(request, response))) {
     return;
   }
 
-  sendJson(response, 200, getAllReports());
+  sendJson(response, 200, await getAllReports());
 }
 
-function getAdminUsers(request, response) {
-  if (!ensureAdministrator(request, response)) {
+async function getAdminUsers(request, response) {
+  if (!(await ensureAdministrator(request, response))) {
     return;
   }
 
   sendJson(response, 200, {
-    users: getAllUsers(),
-    summary: getUsersSummary(),
+    users: await getAllUsers(),
+    summary: await getUsersSummary(),
   });
 }
 

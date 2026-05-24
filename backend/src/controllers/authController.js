@@ -4,7 +4,7 @@ const { readBody, sendJson } = require("../utils/http");
 async function login(request, response) {
   try {
     const { email, password } = await readBody(request);
-    const user = validateLogin(email || "", password || "");
+    const user = await validateLogin(email || "", password || "");
 
     if (!user) {
       sendJson(response, 401, { message: "Invalid email or password." });

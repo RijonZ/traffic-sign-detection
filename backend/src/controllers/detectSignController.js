@@ -11,16 +11,16 @@ function sendUserNotFound(response) {
   sendJson(response, 404, { message: "User not found." });
 }
 
-function getDetectionHistory(request, response) {
+async function getDetectionHistory(request, response) {
   const userEmail = getEmailFromQuery(request);
 
-  if (!findUserByEmail(userEmail)) {
+  if (!(await findUserByEmail(userEmail))) {
     sendUserNotFound(response);
     return;
   }
 
   sendJson(response, 200, {
-    detections: getUserDetections(userEmail),
+    detections: await getUserDetections(userEmail),
   });
 }
 
@@ -29,12 +29,12 @@ async function createDetectSignRequest(request, response) {
     const body = await readBody(request);
     const userEmail = body.userEmail || "";
 
-    if (!findUserByEmail(userEmail)) {
+    if (!(await findUserByEmail(userEmail))) {
       sendUserNotFound(response);
       return;
     }
 
-    const result = detectSign(userEmail, {
+    const result = await detectSign(userEmail, {
       fileName: body.fileName,
       fileType: body.fileType,
       fileSize: body.fileSize,

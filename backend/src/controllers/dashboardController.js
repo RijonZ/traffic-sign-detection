@@ -11,9 +11,9 @@ function sendUserNotFound(response) {
   sendJson(response, 404, { message: "User not found." });
 }
 
-function getDashboard(_, response, params) {
+async function getDashboard(_, response, params) {
   const [email] = params;
-  const user = findUserByEmail(email);
+  const user = await findUserByEmail(email);
 
   if (!user) {
     sendUserNotFound(response);
@@ -27,47 +27,47 @@ function getDashboard(_, response, params) {
       role: user.role,
       status: user.status,
     },
-    summary: getDashboardSummary(email),
+    summary: await getDashboardSummary(email),
   });
 }
 
-function getDetections(_, response, params) {
+async function getDetections(_, response, params) {
   const [email] = params;
 
-  if (!findUserByEmail(email)) {
+  if (!(await findUserByEmail(email))) {
     sendUserNotFound(response);
     return;
   }
 
-  sendJson(response, 200, { detections: getUserDetections(email) });
+  sendJson(response, 200, { detections: await getUserDetections(email) });
 }
 
 async function createDetection(request, response, params) {
   const [email] = params;
 
-  if (!findUserByEmail(email)) {
+  if (!(await findUserByEmail(email))) {
     sendUserNotFound(response);
     return;
   }
 
   try {
     const body = await readBody(request);
-    const detection = addDetection(email, body);
+    const detection = await addDetection(email, body);
     sendJson(response, 201, { detection });
   } catch (error) {
     sendJson(response, 400, { message: "Invalid request body." });
   }
 }
 
-function getReports(_, response, params) {
+async function getReports(_, response, params) {
   const [email] = params;
 
-  if (!findUserByEmail(email)) {
+  if (!(await findUserByEmail(email))) {
     sendUserNotFound(response);
     return;
   }
 
-  sendJson(response, 200, { reports: getUserReports(email) });
+  sendJson(response, 200, { reports: await getUserReports(email) });
 }
 
 module.exports = { createDetection, getDashboard, getDetections, getReports };

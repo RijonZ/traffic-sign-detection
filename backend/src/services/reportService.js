@@ -1,17 +1,12 @@
 const { getUserDetections } = require("./detectionService");
-const { detections, users } = require("../data/store");
-
-function getRequesterName(email) {
-  const user = users.find((item) => item.email.toLowerCase() === email.toLowerCase());
-  return user ? user.name : email;
-}
+const { query } = require("../db/client");
 
 function formatReport(item) {
   return {
     id: `REP-${item.id}`,
     detectionId: item.id,
     fileName: item.fileName,
-    requestedBy: getRequesterName(item.userEmail),
+    requestedBy: item.requestedBy || item.userEmail,
     userEmail: item.userEmail,
     sign: item.sign,
     category: item.category,
@@ -21,8 +16,9 @@ function formatReport(item) {
   };
 }
 
-function getUserReports(email) {
-  return getUserDetections(email).map(formatReport);
+async function getUserReports(email) {
+  const detections = await getUserDetections(email);
+  return detections.map(formatReport);
 }
 
 function getReportsSummary(reports) {
@@ -43,8 +39,21 @@ function getReportsSummary(reports) {
   };
 }
 
-function getAllReports() {
-  const reports = detections.map(formatReport);
+async function getAllReports() {
+  const result = await query(
+    `
+      SELECT email
+      FROM users
+      ORDER BY created_at DESC
+    `
+  );
+  const reportGroups = await Promise.all(
+    result.rows.map(async (user) => {
+      const detections = await getUserDetections(user.email);
+      return detections.map((item) => formatReport({ ...item, requestedBy: user.email }));
+    })
+  );
+  const reports = reportGroups.flat();
 
   return {
     reports,
