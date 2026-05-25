@@ -123,6 +123,16 @@ function ChatBot({ currentUser }) {
                 {item.text}
               </p>
             ))}
+            {isSending && (
+              <div className="chat-message bot typing-message" aria-live="polite">
+                <span>Typing</span>
+                <span className="typing-dots" aria-hidden="true">
+                  <i />
+                  <i />
+                  <i />
+                </span>
+              </div>
+            )}
           </div>
 
           <form className="chat-form" onSubmit={sendMessage}>
@@ -132,7 +142,7 @@ function ChatBot({ currentUser }) {
               value={message}
               onChange={(event) => setMessage(event.target.value)}
             />
-            <button className="primary-btn" type="submit">
+            <button className="primary-btn" disabled={isSending} type="submit">
               {isSending ? "..." : "Send"}
             </button>
           </form>

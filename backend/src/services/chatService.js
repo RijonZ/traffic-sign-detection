@@ -1,3 +1,23 @@
+const OpenAI = require("openai");
+
+require("../db/client");
+
+let openaiClient = null;
+
+function getOpenAiClient() {
+  if (!process.env.OPENAI_API_KEY) {
+    return null;
+  }
+
+  if (!openaiClient) {
+    openaiClient = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+
+  return openaiClient;
+}
+
 function getRoleHint(role) {
   if (role === "Administrator") {
     return "As an administrator, you can review users, detections, reports, audit logs, and model monitoring.";
@@ -10,7 +30,7 @@ function getRoleHint(role) {
   return "As a user, you can upload images, review detection history, download reports, and manage your subscription.";
 }
 
-function createChatReply(message, user = {}) {
+function createFallbackReply(message, user = {}) {
   const text = String(message || "").toLowerCase();
   const role = user.role || "User";
 
@@ -55,6 +75,52 @@ function createChatReply(message, user = {}) {
   }
 
   return `${getRoleHint(role)} You can also ask me about confidence, rejected uploads, reports, subscription plans, detection history, and exports.`;
+}
+
+async function createChatReply(message, user = {}) {
+  const text = String(message || "").trim();
+  const role = user.role || "User";
+
+  if (!text) {
+    return {
+      reply: createFallbackReply(message, user),
+      source: "fallback",
+    };
+  }
+
+  const client = getOpenAiClient();
+
+  if (!client) {
+    return {
+      reply: createFallbackReply(message, user),
+      source: "fallback",
+    };
+  }
+
+  try {
+    const response = await client.responses.create({
+      model: process.env.OPENAI_CHAT_MODEL || "gpt-4.1-mini",
+      instructions: [
+        "You are the AI assistant inside a Traffic Sign Detection web application.",
+        "Help users with authentication, dashboards, traffic sign detection, detection history, reports, subscriptions, exports, admin users, and project workflow.",
+        "If the user asks about app behavior, answer based on this app: React frontend, Node backend, CockroachDB/PostgreSQL database, and a demo traffic sign prediction flow.",
+        `The current user's role is ${role}. Tailor guidance to that role.`,
+        "Be concise, friendly, and practical. If a question is unrelated, still answer helpfully, but keep it brief.",
+      ].join(" "),
+      input: text,
+    });
+
+    return {
+      reply: response.output_text || createFallbackReply(message, user),
+      source: "openai",
+    };
+  } catch (error) {
+    console.error("OpenAI chat failed:", error.message);
+    return {
+      reply: createFallbackReply(message, user),
+      source: "fallback",
+    };
+  }
 }
 
 module.exports = { createChatReply };

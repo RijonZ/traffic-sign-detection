@@ -85,6 +85,35 @@
   color: #1f2937;
 }
 
+.typing-message {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+}
+
+.typing-dots {
+  align-items: center;
+  display: inline-flex;
+  gap: 4px;
+}
+
+.typing-dots i {
+  animation: typingPulse 900ms ease-in-out infinite;
+  background-color: #6b7280;
+  border-radius: 999px;
+  display: block;
+  height: 5px;
+  width: 5px;
+}
+
+.typing-dots i:nth-child(2) {
+  animation-delay: 140ms;
+}
+
+.typing-dots i:nth-child(3) {
+  animation-delay: 280ms;
+}
+
 .chat-message.user {
   background-color: #2563eb;
   color: white;
@@ -144,5 +173,18 @@
 
   80% {
     transform: translateX(3px);
+  }
+}
+
+@keyframes typingPulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+
+  50% {
+    opacity: 1;
+    transform: translateY(-2px);
   }
 }
