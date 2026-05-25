@@ -31,14 +31,21 @@ function UsersPage({ currentUser, onLogout, onNavigate }) {
       return;
     }
 
-    fetch(`${API_BASE_URL}/admin/users?adminEmail=${encodeURIComponent(currentUser.email)}`)
-      .then((response) => (response.ok ? response.json() : null))
-      .then((data) => {
-        if (data?.users?.length) {
-          setUsers(data.users);
-        }
-      })
-      .catch(() => setUsers(fallbackUsers));
+    function loadUsers() {
+      fetch(`${API_BASE_URL}/admin/users?adminEmail=${encodeURIComponent(currentUser.email)}`)
+        .then((response) => (response.ok ? response.json() : null))
+        .then((data) => {
+          if (data?.users?.length) {
+            setUsers(data.users);
+          }
+        })
+        .catch(() => setUsers(fallbackUsers));
+    }
+
+    loadUsers();
+    const refreshTimer = window.setInterval(loadUsers, 5000);
+
+    return () => window.clearInterval(refreshTimer);
   }, [currentUser, fallbackUsers]);
 
   const admins = users.filter((user) => user.role === "Administrator").length;
@@ -97,6 +104,12 @@ function UsersPage({ currentUser, onLogout, onNavigate }) {
 
         <section className="dashboard-grid">
           <div className="dashboard-card">
+            <h3>Online Now</h3>
+            <p className="metric-value">
+              {users.filter((user) => user.sessionStatus === "Online").length}
+            </p>
+          </div>
+          <div className="dashboard-card">
             <h3>Administrators</h3>
             <p className="metric-value">{admins}</p>
           </div>
@@ -115,7 +128,7 @@ function UsersPage({ currentUser, onLogout, onNavigate }) {
             <p>Name</p>
             <p>Email</p>
             <p>Role</p>
-            <p>Status</p>
+            <p>Session</p>
           </div>
 
           {users.map((user) => (
@@ -124,7 +137,7 @@ function UsersPage({ currentUser, onLogout, onNavigate }) {
               <p>{user.email}</p>
               <p>{user.role}</p>
               <p>
-                <span className="status-pill">{user.status || "Active"}</span>
+                <span className="status-pill">{user.sessionStatus || "Offline"}</span>
               </p>
             </div>
           ))}

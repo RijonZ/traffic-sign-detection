@@ -1,8 +1,7 @@
 .auth-page {
   align-items: flex-start;
   display: grid;
-  gap: 32px;
-  grid-template-columns: minmax(300px, 440px) minmax(260px, 380px);
+  grid-template-columns: minmax(300px, 460px);
   justify-content: center;
 }
 
@@ -15,6 +14,34 @@
   max-width: 440px;
   padding: 32px;
   width: 100%;
+}
+
+.auth-card-centered {
+  max-width: 460px;
+}
+
+.auth-tabs {
+  background-color: #eef2f7;
+  border-radius: 6px;
+  display: grid;
+  gap: 3px;
+  grid-template-columns: 1fr 1fr;
+  margin: 0 0 22px;
+  padding: 3px;
+}
+
+.auth-tab {
+  background-color: transparent;
+  border-radius: 5px;
+  color: #374151;
+  padding: 7px 10px;
+  text-align: center;
+}
+
+.auth-tab.active {
+  background-color: white;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+  color: #2563eb;
 }
 
 .auth-card h1,
@@ -58,6 +85,10 @@
 
 .auth-card button {
   margin-top: 18px;
+}
+
+.auth-card .auth-tab {
+  margin: 0;
 }
 
 .auth-error {

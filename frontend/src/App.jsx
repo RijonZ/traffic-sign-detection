@@ -19,66 +19,22 @@ import Reports from "./pages/Reports";
 import SettingsPage from "./pages/SettingsPage";
 import UsersPage from "./pages/UsersPage";
 
-const ADMIN_USER = {
-  name: "Admin",
-  email: "admin@trafficsign.ai",
-  password: "admin123",
-  role: "Administrator",
-};
-
-const MANAGER_USER = {
-  name: "Manager",
-  email: "manager@trafficsign.ai",
-  password: "manager123",
-  role: "Manager",
-};
-
 const USERS_KEY = "traffic-sign-users";
 const SESSION_KEY = "traffic-sign-session";
-const DEFAULT_USERS = [ADMIN_USER, MANAGER_USER];
 
 const blankPages = {};
 
-function readUsers() {
-  const savedUsers = JSON.parse(localStorage.getItem(USERS_KEY) || "[]");
-  const missingDefaultUsers = DEFAULT_USERS.filter(
-    (defaultUser) =>
-      !savedUsers.some((user) => user.email.toLowerCase() === defaultUser.email.toLowerCase())
-  );
-
-  return [...missingDefaultUsers, ...savedUsers];
-}
-
 function getPageFromHash() {
   return window.location.hash.replace("#/", "") || "home";
-}
-
-function getRoleFromEmail(email) {
-  const normalizedEmail = email.toLowerCase();
-
-  if (normalizedEmail.includes("admin")) {
-    return "Administrator";
-  }
-
-  if (normalizedEmail.includes("manager")) {
-    return "Manager";
-  }
-
-  return "User";
 }
 
 const API_BASE_URL = "http://localhost:5000/api";
 
 function App() {
   const [page, setPage] = useState(getPageFromHash);
-  const [users, setUsers] = useState(readUsers);
   const [currentUser, setCurrentUser] = useState(() => {
     return JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
   });
-
-  useEffect(() => {
-    localStorage.setItem(USERS_KEY, JSON.stringify(users));
-  }, [users]);
 
   useEffect(() => {
     function handleHashChange() {
@@ -130,33 +86,41 @@ function App() {
     }
   }
 
-  function signUp(name, email, password) {
-    const userExists = users.some(
-      (user) => user.email.toLowerCase() === email.toLowerCase()
-    );
+  async function signUp(name, email, password) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+        body: JSON.stringify({ name, email, password }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      });
+      const data = await response.json();
 
-    if (userExists) {
-      return { ok: false, message: "An account with this email already exists." };
+      if (!response.ok) {
+        return { ok: false, message: data.message || "Sign up failed." };
+      }
+
+      const sessionUser = data.user;
+
+      setCurrentUser(sessionUser);
+      localStorage.setItem(SESSION_KEY, JSON.stringify(sessionUser));
+      navigate(getLandingPage(sessionUser.role));
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, message: "Backend is not available. Please try again later." };
     }
-
-    const newUser = {
-      name,
-      email,
-      password,
-      role: getRoleFromEmail(email),
-    };
-
-    const nextUsers = [...users, newUser];
-    const sessionUser = { email, name, role: newUser.role };
-
-    setUsers(nextUsers);
-    setCurrentUser(sessionUser);
-    localStorage.setItem(SESSION_KEY, JSON.stringify(sessionUser));
-    navigate(getLandingPage(newUser.role));
-    return { ok: true };
   }
 
   function logout() {
+    const sessionToken = currentUser?.sessionToken;
+
+    if (sessionToken) {
+      fetch(`${API_BASE_URL}/auth/logout`, {
+        body: JSON.stringify({ sessionToken }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      }).catch(() => {});
+    }
+
     setCurrentUser(null);
     localStorage.removeItem(SESSION_KEY);
     navigate("home");

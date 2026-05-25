@@ -1,4 +1,4 @@
-const { login } = require("../controllers/authController");
+const { login, logout, signup } = require("../controllers/authController");
 const { sendMessage } = require("../controllers/chatController");
 const {
   getAdminAuditLogs,
@@ -21,6 +21,8 @@ const { sendJson, sendOptions, notFound } = require("../utils/http");
 const routes = [
   { method: "GET", path: /^\/api\/health$/, handler: (_, response) => sendJson(response, 200, { ok: true }) },
   { method: "POST", path: /^\/api\/auth\/login$/, handler: login },
+  { method: "POST", path: /^\/api\/auth\/signup$/, handler: signup },
+  { method: "POST", path: /^\/api\/auth\/logout$/, handler: logout },
   { method: "POST", path: /^\/api\/chat$/, handler: sendMessage },
   { method: "GET", path: /^\/api\/detect-sign$/, handler: getDetectionHistory },
   { method: "POST", path: /^\/api\/detect-sign$/, handler: createDetectSignRequest },

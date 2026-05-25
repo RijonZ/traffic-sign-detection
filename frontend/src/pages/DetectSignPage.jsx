@@ -28,8 +28,12 @@ const initialSteps = [
   { label: "Completed", done: false },
 ];
 
-function readHistory() {
-  return JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+function getHistoryKey(currentUser) {
+  return currentUser?.email ? `${HISTORY_KEY}:${currentUser.email}` : HISTORY_KEY;
+}
+
+function readHistory(currentUser) {
+  return JSON.parse(localStorage.getItem(getHistoryKey(currentUser)) || "[]");
 }
 
 function DetectSignPage({ currentUser, onLogout, onNavigate }) {
@@ -39,7 +43,7 @@ function DetectSignPage({ currentUser, onLogout, onNavigate }) {
   const [status, setStatus] = useState("Ready");
   const [steps, setSteps] = useState(initialSteps);
   const [result, setResult] = useState(null);
-  const [history, setHistory] = useState(readHistory);
+  const [history, setHistory] = useState(() => readHistory(currentUser));
   const timers = useRef([]);
 
   const canDetect = useMemo(() => file && !error && status !== "Processing", [file, error, status]);
@@ -52,6 +56,10 @@ function DetectSignPage({ currentUser, onLogout, onNavigate }) {
       }
     };
   }, [preview]);
+
+  useEffect(() => {
+    setHistory(readHistory(currentUser));
+  }, [currentUser]);
 
   function clearTimers() {
     timers.current.forEach((timer) => clearTimeout(timer));
@@ -111,7 +119,7 @@ function DetectSignPage({ currentUser, onLogout, onNavigate }) {
 
     setResult(completedResult);
     setHistory(nextHistory);
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(nextHistory));
+    localStorage.setItem(getHistoryKey(currentUser), JSON.stringify(nextHistory));
   }
 
   async function requestBackendDetection() {

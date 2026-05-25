@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Navbar from "../shared/Navbar";
 import "../styles/admin-dashboard.css";
 import "../styles/auth.css";
@@ -6,6 +6,7 @@ import "../styles/dashboard.css";
 
 const USERS_KEY = "traffic-sign-users";
 const HISTORY_KEY = "traffic-sign-detections";
+const API_BASE_URL = "http://localhost:5000/api";
 
 const sampleUsers = [
   { name: "Admin", email: "admin@trafficsign.ai", role: "Administrator" },
@@ -29,8 +30,32 @@ function readDetections() {
 }
 
 function AdminDashboard({ currentUser, onLogout, onNavigate }) {
-  const users = useMemo(readUsers, []);
+  const fallbackUsers = useMemo(readUsers, []);
+  const [users, setUsers] = useState(fallbackUsers);
   const detections = useMemo(readDetections, []);
+
+  useEffect(() => {
+    if (!currentUser || currentUser.role !== "Administrator") {
+      return;
+    }
+
+    function loadUsers() {
+      fetch(`${API_BASE_URL}/admin/users?adminEmail=${encodeURIComponent(currentUser.email)}`)
+        .then((response) => (response.ok ? response.json() : null))
+        .then((data) => {
+          if (data?.users?.length) {
+            setUsers(data.users);
+          }
+        })
+        .catch(() => setUsers(fallbackUsers));
+    }
+
+    loadUsers();
+    const refreshTimer = window.setInterval(loadUsers, 5000);
+
+    return () => window.clearInterval(refreshTimer);
+  }, [currentUser, fallbackUsers]);
+
   const managers = users.filter((user) => user.role === "Manager").length;
   const regularUsers = users.filter((user) => user.role === "User").length;
 
