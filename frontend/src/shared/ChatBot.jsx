@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "../styles/chat-bot.css";
 
 const API_BASE_URL = "http://localhost:5000/api";
@@ -56,6 +56,7 @@ function ChatBot({ currentUser }) {
   const [messages, setMessages] = useState([welcomeMessage]);
   const [isSending, setIsSending] = useState(false);
   const [isNudging, setIsNudging] = useState(false);
+  const messagesEndRef = useRef(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -69,6 +70,14 @@ function ChatBot({ currentUser }) {
 
     return () => clearInterval(interval);
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [isOpen, isSending, messages]);
 
   async function sendMessage(event) {
     event.preventDefault();
@@ -125,7 +134,7 @@ function ChatBot({ currentUser }) {
             ))}
             {isSending && (
               <div className="chat-message bot typing-message" aria-live="polite">
-                <span>Typing</span>
+                <span>Generating response</span>
                 <span className="typing-dots" aria-hidden="true">
                   <i />
                   <i />
@@ -133,6 +142,7 @@ function ChatBot({ currentUser }) {
                 </span>
               </div>
             )}
+            <div ref={messagesEndRef} />
           </div>
 
           <form className="chat-form" onSubmit={sendMessage}>

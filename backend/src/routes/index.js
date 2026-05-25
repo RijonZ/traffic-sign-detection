@@ -16,6 +16,10 @@ const {
   createDetection,
   getReports,
 } = require("../controllers/dashboardController");
+const {
+  getNotifications,
+  markAsRead,
+} = require("../controllers/notificationController");
 const { sendJson, sendOptions, notFound } = require("../utils/http");
 
 const routes = [
@@ -34,6 +38,8 @@ const routes = [
   { method: "GET", path: /^\/api\/users\/([^/]+)\/detections$/, handler: getDetections },
   { method: "POST", path: /^\/api\/users\/([^/]+)\/detections$/, handler: createDetection },
   { method: "GET", path: /^\/api\/users\/([^/]+)\/reports$/, handler: getReports },
+  { method: "GET", path: /^\/api\/users\/([^/]+)\/notifications$/, handler: getNotifications },
+  { method: "POST", path: /^\/api\/users\/([^/]+)\/notifications\/read$/, handler: markAsRead },
 ];
 
 function handleRequest(request, response) {

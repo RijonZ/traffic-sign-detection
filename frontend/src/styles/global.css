@@ -195,6 +195,13 @@ button:disabled {
   white-space: normal;
 }
 
+.notification-empty {
+  color: #4b5563;
+  font-size: 13px;
+  line-height: 1.4;
+  margin: 8px 0 0;
+}
+
 .primary-btn {
   background-color: #2563eb;
   color: white;

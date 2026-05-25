@@ -174,6 +174,20 @@ async function detectSign(email, file) {
       status: "Rejected",
       box: "",
     });
+    const { createNotificationForEmail, notifyRoles } = require("./notificationService");
+
+    await createNotificationForEmail(
+      email,
+      "detection-rejected",
+      "Detection rejected",
+      validationMessage
+    );
+    await notifyRoles(
+      ["Administrator", "Manager"],
+      "detection-rejected",
+      "Detection rejected",
+      `${email} submitted an image that was rejected.`
+    );
 
     return {
       ok: false,
@@ -190,6 +204,20 @@ async function detectSign(email, file) {
     ...prediction,
     status: "Completed",
   });
+  const { createNotificationForEmail, notifyRoles } = require("./notificationService");
+
+  await createNotificationForEmail(
+    email,
+    "detection-completed",
+    "Detection completed",
+    `${prediction.sign} was detected with ${prediction.confidence}% confidence.`
+  );
+  await notifyRoles(
+    ["Administrator", "Manager"],
+    "detection-completed",
+    "New detection completed",
+    `${email} completed a ${prediction.sign} detection.`
+  );
 
   return {
     ok: true,

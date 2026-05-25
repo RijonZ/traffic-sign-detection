@@ -185,6 +185,20 @@ async function createUserAccount(name, email, password) {
   );
 
   const sessionToken = await createLoginSession(userResult.rows[0].id);
+  const { createNotificationForEmail, notifyRoles } = require("./notificationService");
+
+  await createNotificationForEmail(
+    email,
+    "account",
+    "Account created",
+    "Your Traffic Sign AI account is ready."
+  );
+  await notifyRoles(
+    ["Administrator"],
+    "new-user",
+    "New user registered",
+    `${email} created a new account.`
+  );
 
   return {
     ok: true,
@@ -220,6 +234,14 @@ async function validateLogin(email, password) {
   }
 
   const sessionToken = await createLoginSession(user.id);
+  const { createNotificationForEmail } = require("./notificationService");
+
+  await createNotificationForEmail(
+    email,
+    "account",
+    "Signed in",
+    "You signed in to Traffic Sign AI."
+  );
 
   return {
     ...formatUser(user),

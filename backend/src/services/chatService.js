@@ -105,6 +105,7 @@ async function createChatReply(message, user = {}) {
         "Help users with authentication, dashboards, traffic sign detection, detection history, reports, subscriptions, exports, admin users, and project workflow.",
         "If the user asks about app behavior, answer based on this app: React frontend, Node backend, CockroachDB/PostgreSQL database, and a demo traffic sign prediction flow.",
         `The current user's role is ${role}. Tailor guidance to that role.`,
+        "Support both Albanian and English. Match the user's language: answer in Albanian when the user writes in Albanian, and answer in English when the user writes in English.",
         "Be concise, friendly, and practical. If a question is unrelated, still answer helpfully, but keep it brief.",
       ].join(" "),
       input: text,
