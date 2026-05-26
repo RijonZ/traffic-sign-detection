@@ -2,6 +2,7 @@ const { login, logout, signup } = require("../controllers/authController");
 const { sendMessage } = require("../controllers/chatController");
 const {
   getAdminAuditLogs,
+  getAdminDetections,
   getAdminReports,
   getAdminUsers,
   getModelMonitoring,
@@ -32,6 +33,7 @@ const routes = [
   { method: "POST", path: /^\/api\/detect-sign$/, handler: createDetectSignRequest },
   { method: "GET", path: /^\/api\/admin\/model-monitoring$/, handler: getModelMonitoring },
   { method: "GET", path: /^\/api\/admin\/audit-logs$/, handler: getAdminAuditLogs },
+  { method: "GET", path: /^\/api\/admin\/detections$/, handler: getAdminDetections },
   { method: "GET", path: /^\/api\/admin\/reports$/, handler: getAdminReports },
   { method: "GET", path: /^\/api\/admin\/users$/, handler: getAdminUsers },
   { method: "GET", path: /^\/api\/users\/([^/]+)\/dashboard$/, handler: getDashboard },

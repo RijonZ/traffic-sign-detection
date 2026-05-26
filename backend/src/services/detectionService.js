@@ -45,6 +45,7 @@ function formatDetection(row) {
   return {
     id: String(row.request_id),
     userEmail: row.user_email,
+    requestedBy: row.user_name || row.user_email,
     fileName: row.filename || "unknown-file",
     sign: row.sign_name || "Not detected",
     category: row.category || "Unknown",
@@ -90,6 +91,7 @@ async function getUserDetections(email) {
         dr.status,
         dr.requested_at,
         dr.completed_at,
+        u.name AS user_name,
         u.email AS user_email,
         f.filename,
         f.file_size,
@@ -111,6 +113,60 @@ async function getUserDetections(email) {
   );
 
   return result.rows.map(formatDetection);
+}
+
+function getDetectionsSummary(detections) {
+  const completed = detections.filter((item) => item.status === "Completed").length;
+  const processing = detections.filter((item) => item.status === "Processing").length;
+  const rejected = detections.filter((item) => item.status === "Rejected").length;
+  const averageConfidence = detections.length
+    ? Math.round(
+        detections.reduce((total, item) => total + Number(item.confidence || 0), 0) /
+          detections.length
+      )
+    : 0;
+
+  return {
+    totalRequests: detections.length,
+    completed,
+    processing,
+    rejected,
+    averageConfidence,
+  };
+}
+
+async function getAllDetections() {
+  const result = await query(
+    `
+      SELECT
+        dr.id AS request_id,
+        dr.status,
+        dr.requested_at,
+        dr.completed_at,
+        u.name AS user_name,
+        u.email AS user_email,
+        f.filename,
+        f.file_size,
+        f.entity AS file_type,
+        ts.sign_name,
+        ts.category,
+        res.confidence,
+        res.bounding_box,
+        res.detected_at
+      FROM detection_requests dr
+      JOIN users u ON u.id = dr.user_id
+      LEFT JOIN files f ON f.id = dr.file_id
+      LEFT JOIN detection_results res ON res.request_id = dr.id
+      LEFT JOIN traffic_signs ts ON ts.id = res.traffic_sign_id
+      ORDER BY dr.requested_at DESC
+    `
+  );
+  const detections = result.rows.map(formatDetection);
+
+  return {
+    detections,
+    summary: getDetectionsSummary(detections),
+  };
 }
 
 async function addDetection(email, data) {
@@ -251,6 +307,7 @@ async function getDashboardSummary(email) {
 module.exports = {
   addDetection,
   detectSign,
+  getAllDetections,
   getDashboardSummary,
   getUserDetections,
 };

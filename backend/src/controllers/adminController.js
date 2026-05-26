@@ -1,4 +1,5 @@
 const { getAuditLogs } = require("../services/auditLogService");
+const { getAllDetections } = require("../services/detectionService");
 const { getModelMonitoringSummary } = require("../services/modelMonitoringService");
 const { getAllReports } = require("../services/reportService");
 const { findUserByEmail, getAllUsers, getUsersSummary } = require("../services/userService");
@@ -36,6 +37,14 @@ async function getAdminReports(request, response) {
   sendJson(response, 200, await getAllReports());
 }
 
+async function getAdminDetections(request, response) {
+  if (!(await ensureAdministrator(request, response))) {
+    return;
+  }
+
+  sendJson(response, 200, await getAllDetections());
+}
+
 async function getAdminAuditLogs(request, response) {
   if (!(await ensureAdministrator(request, response))) {
     return;
@@ -57,6 +66,7 @@ async function getAdminUsers(request, response) {
 
 module.exports = {
   getAdminAuditLogs,
+  getAdminDetections,
   getAdminReports,
   getAdminUsers,
   getModelMonitoring,

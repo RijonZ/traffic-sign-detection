@@ -1,10 +1,11 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Navbar from "../shared/Navbar";
 import "../styles/all-detections.css";
 import "../styles/auth.css";
 import "../styles/dashboard.css";
 
 const HISTORY_KEY = "traffic-sign-detections";
+const API_BASE_URL = "http://localhost:5000/api";
 
 const sampleDetections = [
   {
@@ -77,7 +78,24 @@ function readDetections() {
 }
 
 function AllDetections({ currentUser, onLogout, onNavigate }) {
-  const detections = useMemo(readDetections, []);
+  const fallbackDetections = useMemo(readDetections, []);
+  const [detections, setDetections] = useState(fallbackDetections);
+
+  useEffect(() => {
+    if (!currentUser || currentUser.role !== "Administrator") {
+      return;
+    }
+
+    fetch(`${API_BASE_URL}/admin/detections?adminEmail=${encodeURIComponent(currentUser.email)}`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (data?.detections?.length) {
+          setDetections(data.detections);
+        }
+      })
+      .catch(() => setDetections(fallbackDetections));
+  }, [currentUser, fallbackDetections]);
+
   const completed = detections.filter((item) => item.status === "Completed").length;
   const processing = detections.filter((item) => item.status === "Processing").length;
   const rejected = detections.filter((item) => item.status === "Rejected").length;
