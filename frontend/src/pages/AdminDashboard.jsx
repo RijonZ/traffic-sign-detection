@@ -32,7 +32,11 @@ function readDetections() {
 function AdminDashboard({ currentUser, onLogout, onNavigate }) {
   const fallbackUsers = useMemo(readUsers, []);
   const [users, setUsers] = useState(fallbackUsers);
-  const detections = useMemo(readDetections, []);
+  const fallbackDetections = useMemo(readDetections, []);
+  const [dashboardSummary, setDashboardSummary] = useState({
+    detections: fallbackDetections.length,
+  });
+  const [recentActivity, setRecentActivity] = useState(sampleActivity);
 
   useEffect(() => {
     if (!currentUser || currentUser.role !== "Administrator") {
@@ -50,11 +54,34 @@ function AdminDashboard({ currentUser, onLogout, onNavigate }) {
         .catch(() => setUsers(fallbackUsers));
     }
 
-    loadUsers();
-    const refreshTimer = window.setInterval(loadUsers, 5000);
+    function loadDashboard() {
+      fetch(`${API_BASE_URL}/admin/dashboard?adminEmail=${encodeURIComponent(currentUser.email)}`)
+        .then((response) => (response.ok ? response.json() : null))
+        .then((data) => {
+          if (data?.summary) {
+            setDashboardSummary(data.summary);
+          }
 
-    return () => window.clearInterval(refreshTimer);
-  }, [currentUser, fallbackUsers]);
+          if (data?.recentActivity?.length) {
+            setRecentActivity(data.recentActivity);
+          }
+        })
+        .catch(() => {
+          setDashboardSummary({ detections: fallbackDetections.length });
+          setRecentActivity(sampleActivity);
+        });
+    }
+
+    loadUsers();
+    loadDashboard();
+    const refreshTimer = window.setInterval(loadUsers, 5000);
+    const dashboardRefreshTimer = window.setInterval(loadDashboard, 5000);
+
+    return () => {
+      window.clearInterval(refreshTimer);
+      window.clearInterval(dashboardRefreshTimer);
+    };
+  }, [currentUser, fallbackDetections.length, fallbackUsers]);
 
   const managers = users.filter((user) => user.role === "Manager").length;
   const regularUsers = users.filter((user) => user.role === "User").length;
@@ -123,7 +150,7 @@ function AdminDashboard({ currentUser, onLogout, onNavigate }) {
           </div>
           <div className="dashboard-card">
             <h3>Detections</h3>
-            <p className="metric-value">{detections.length}</p>
+            <p className="metric-value">{dashboardSummary.detections}</p>
           </div>
         </section>
 
@@ -170,7 +197,7 @@ function AdminDashboard({ currentUser, onLogout, onNavigate }) {
         <section className="activity-panel">
           <div>
             <h3>Recent Admin Activity</h3>
-            {sampleActivity.map((item) => (
+            {recentActivity.map((item) => (
               <p key={item}>{item}</p>
             ))}
           </div>

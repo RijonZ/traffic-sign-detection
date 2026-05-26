@@ -30,6 +30,7 @@ POST /api/chat
 GET  /api/detect-sign?userEmail=:email
 POST /api/detect-sign
 GET  /api/admin/audit-logs?adminEmail=:email
+GET  /api/admin/dashboard?adminEmail=:email
 GET  /api/admin/detections?adminEmail=:email
 GET  /api/admin/model-monitoring?adminEmail=:email
 GET  /api/admin/reports?adminEmail=:email
