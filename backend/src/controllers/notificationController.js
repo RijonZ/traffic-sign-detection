@@ -1,5 +1,6 @@
 const {
   getUserNotifications,
+  markAllNotificationsRead,
   markNotificationRead,
 } = require("../services/notificationService");
 const { findUserByEmail } = require("../services/userService");
@@ -35,4 +36,16 @@ async function markAsRead(request, response, params) {
   }
 }
 
-module.exports = { getNotifications, markAsRead };
+async function markAllAsRead(_, response, params) {
+  const [email] = params;
+
+  if (!(await findUserByEmail(email))) {
+    sendJson(response, 404, { message: "User not found." });
+    return;
+  }
+
+  await markAllNotificationsRead(email);
+  sendJson(response, 200, { ok: true });
+}
+
+module.exports = { getNotifications, markAllAsRead, markAsRead };

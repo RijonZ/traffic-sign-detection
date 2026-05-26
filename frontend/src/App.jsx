@@ -25,7 +25,7 @@ const SESSION_KEY = "traffic-sign-session";
 const blankPages = {};
 
 function getPageFromHash() {
-  return window.location.hash.replace("#/", "") || "home";
+  return window.location.hash.replace("#/", "").split("?")[0] || "home";
 }
 
 const API_BASE_URL = "http://localhost:5000/api";

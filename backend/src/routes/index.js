@@ -20,8 +20,13 @@ const {
 } = require("../controllers/dashboardController");
 const {
   getNotifications,
+  markAllAsRead,
   markAsRead,
 } = require("../controllers/notificationController");
+const {
+  confirmStripeCheckoutSession,
+  createStripeCheckoutSession,
+} = require("../controllers/paymentController");
 const { sendJson, sendOptions, notFound } = require("../utils/http");
 
 const routes = [
@@ -30,6 +35,8 @@ const routes = [
   { method: "POST", path: /^\/api\/auth\/signup$/, handler: signup },
   { method: "POST", path: /^\/api\/auth\/logout$/, handler: logout },
   { method: "POST", path: /^\/api\/chat$/, handler: sendMessage },
+  { method: "POST", path: /^\/api\/payments\/create-checkout-session$/, handler: createStripeCheckoutSession },
+  { method: "POST", path: /^\/api\/payments\/confirm-checkout-session$/, handler: confirmStripeCheckoutSession },
   { method: "GET", path: /^\/api\/detect-sign$/, handler: getDetectionHistory },
   { method: "POST", path: /^\/api\/detect-sign$/, handler: createDetectSignRequest },
   { method: "GET", path: /^\/api\/admin\/model-monitoring$/, handler: getModelMonitoring },
@@ -44,6 +51,7 @@ const routes = [
   { method: "GET", path: /^\/api\/users\/([^/]+)\/reports$/, handler: getReports },
   { method: "GET", path: /^\/api\/users\/([^/]+)\/notifications$/, handler: getNotifications },
   { method: "POST", path: /^\/api\/users\/([^/]+)\/notifications\/read$/, handler: markAsRead },
+  { method: "POST", path: /^\/api\/users\/([^/]+)\/notifications\/read-all$/, handler: markAllAsRead },
 ];
 
 function handleRequest(request, response) {
