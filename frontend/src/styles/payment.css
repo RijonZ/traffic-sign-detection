@@ -96,6 +96,16 @@
   padding: 14px 16px;
 }
 
+.payment-error {
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #b91c1c;
+  font-weight: 700;
+  margin: 0 0 24px;
+  padding: 14px 16px;
+}
+
 .subscription-details {
   display: grid;
   gap: 8px;

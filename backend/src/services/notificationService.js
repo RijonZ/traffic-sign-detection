@@ -106,9 +106,24 @@ async function markNotificationRead(email, notificationId) {
   );
 }
 
+async function markAllNotificationsRead(email) {
+  await query(
+    `
+      UPDATE notifications
+      SET is_read = true
+      WHERE user_id = (
+        SELECT id FROM users WHERE lower(email) = lower($1)
+      )
+        AND is_read = false
+    `,
+    [email]
+  );
+}
+
 module.exports = {
   createNotificationForEmail,
   getUserNotifications,
+  markAllNotificationsRead,
   markNotificationRead,
   notifyRoles,
 };

@@ -3,7 +3,7 @@ const { getAdminDashboard } = require("../services/adminDashboardService");
 const { getAllDetections } = require("../services/detectionService");
 const { getModelMonitoringSummary } = require("../services/modelMonitoringService");
 const { getAllReports } = require("../services/reportService");
-const { findUserByEmail, getAllUsers, getUsersSummary } = require("../services/userService");
+const { findUserByEmail, getAllUsers, getUsersSummaryFromList } = require("../services/userService");
 const { sendJson } = require("../utils/http");
 
 async function getAdminUser(request) {
@@ -66,10 +66,11 @@ async function getAdminUsers(request, response) {
   if (!(await ensureAdministrator(request, response))) {
     return;
   }
+  const users = await getAllUsers();
 
   sendJson(response, 200, {
-    users: await getAllUsers(),
-    summary: await getUsersSummary(),
+    users,
+    summary: getUsersSummaryFromList(users),
   });
 }
 

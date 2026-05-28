@@ -81,13 +81,20 @@ async function getAllUsers() {
 }
 
 async function getUsersSummary() {
-  const safeUsers = await getAllUsers();
-
   return {
-    totalUsers: safeUsers.length,
-    administrators: safeUsers.filter((user) => user.role === "Administrator").length,
-    managers: safeUsers.filter((user) => user.role === "Manager").length,
-    users: safeUsers.filter((user) => user.role === "User").length,
+    totalUsers: 0,
+    administrators: 0,
+    managers: 0,
+    users: 0,
+  };
+}
+
+function getUsersSummaryFromList(users) {
+  return {
+    totalUsers: users.length,
+    administrators: users.filter((user) => user.role === "Administrator").length,
+    managers: users.filter((user) => user.role === "Manager").length,
+    users: users.filter((user) => user.role === "User").length,
   };
 }
 
@@ -234,14 +241,6 @@ async function validateLogin(email, password) {
   }
 
   const sessionToken = await createLoginSession(user.id);
-  const { createNotificationForEmail } = require("./notificationService");
-
-  await createNotificationForEmail(
-    email,
-    "account",
-    "Signed in",
-    "You signed in to Traffic Sign AI."
-  );
 
   return {
     ...formatUser(user),
@@ -255,6 +254,7 @@ module.exports = {
   findUserByEmail,
   createUserAccount,
   getAllUsers,
+  getUsersSummaryFromList,
   getUsersSummary,
   revokeLoginSession,
   validateLogin,

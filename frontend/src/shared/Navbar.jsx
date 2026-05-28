@@ -98,6 +98,15 @@ function Navbar({ currentUser, onLogout, onNavigate }) {
     onNavigate(notification.page);
   }
 
+  function markAllNotificationsRead() {
+    setNotifications((currentNotifications) =>
+      currentNotifications.map((notification) => ({ ...notification, isRead: true }))
+    );
+    fetch(`${API_BASE_URL}/users/${encodeURIComponent(currentUser.email)}/notifications/read-all`, {
+      method: "POST",
+    }).catch(() => {});
+  }
+
   return (
     <nav className={navClassName}>
       <button className="brand-btn" onClick={() => onNavigate("home")}>
@@ -127,7 +136,14 @@ function Navbar({ currentUser, onLogout, onNavigate }) {
 
             {showNotifications && (
               <div className="notification-menu">
-                <h3>Notifications</h3>
+                <div className="notification-menu-header">
+                  <h3>Notifications</h3>
+                  {unreadCount > 0 && (
+                    <button className="text-btn notification-read-all" onClick={markAllNotificationsRead}>
+                      Mark all as read
+                    </button>
+                  )}
+                </div>
                 {notifications.length ? notifications.map((notification) => (
                   <button
                     className={`notification-item ${notification.isRead ? "is-read" : ""}`}

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Navbar from "../shared/Navbar";
 import "../styles/auth.css";
 import "../styles/dashboard.css";
@@ -65,18 +65,61 @@ function PaymentPage({ currentUser, onLogout, onNavigate }) {
   }, [currentUser]);
   const [savedPayment, setSavedPayment] = useState(initialPayment);
   const [selectedPlan, setSelectedPlan] = useState(initialPayment?.planId || "premium");
-  const [showCheckout, setShowCheckout] = useState(false);
-  const [cardName, setCardName] = useState(currentUser?.name || "");
-  const [cardNumber, setCardNumber] = useState("");
-  const [expiry, setExpiry] = useState("");
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("success");
+  const [redirectingPlan, setRedirectingPlan] = useState("");
+  const [checkoutChecked, setCheckoutChecked] = useState(false);
 
-  const plan = plans.find((item) => item.id === selectedPlan);
+  useEffect(() => {
+    async function confirmStripeReturn() {
+      const queryText = window.location.hash.split("?")[1] || "";
+      const params = new URLSearchParams(queryText);
+      const sessionId = params.get("session_id");
 
-  function choosePlan(planId) {
+      if (!currentUser || checkoutChecked || params.get("checkout") !== "success" || !sessionId) {
+        return;
+      }
+
+      setCheckoutChecked(true);
+      setMessage("Confirming Stripe payment...");
+      setMessageType("success");
+
+      try {
+        const response = await fetch("http://localhost:5000/api/payments/confirm-checkout-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: currentUser.email, sessionId }),
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || "Stripe payment could not be confirmed.");
+        }
+
+        const payment = {
+          ...data.payment,
+          expiresAt: getNextMonthDate(),
+        };
+
+        savePayment(currentUser.email, payment);
+        setSavedPayment(payment);
+        setSelectedPlan(payment.planId);
+        setMessage(`${payment.planName} plan is now paid.`);
+        window.history.replaceState(null, "", "#/subscription");
+      } catch (error) {
+        setMessage(error.message);
+        setMessageType("error");
+      }
+    }
+
+    confirmStripeReturn();
+  }, [checkoutChecked, currentUser]);
+
+  async function choosePlan(planId) {
     const nextPlan = plans.find((item) => item.id === planId);
     setSelectedPlan(planId);
     setMessage("");
+    setMessageType("success");
 
     if (nextPlan.id === "basic") {
       const payment = {
@@ -84,38 +127,35 @@ function PaymentPage({ currentUser, onLogout, onNavigate }) {
         planName: nextPlan.name,
         price: nextPlan.price,
         status: "Active",
-        paidAt: new Date().toLocaleString(),
-        expiresAt: getNextMonthDate(),
-        cardLast4: "Free",
       };
 
       savePayment(currentUser.email, payment);
       setSavedPayment(payment);
-      setShowCheckout(false);
       setMessage("Basic plan is now active.");
+      setMessageType("success");
       return;
     }
 
-    setShowCheckout(true);
-  }
+    try {
+      setRedirectingPlan(planId);
 
-  function completePayment(event) {
-    event.preventDefault();
+      const response = await fetch("http://localhost:5000/api/payments/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: currentUser.email, planId }),
+      });
+      const data = await response.json();
 
-    const payment = {
-      planId: plan.id,
-      planName: plan.name,
-      price: plan.price,
-      status: plan.id === "basic" ? "Active" : "Paid",
-      paidAt: new Date().toLocaleString(),
-      expiresAt: getNextMonthDate(),
-      cardLast4: cardNumber.slice(-4) || "Demo",
-    };
+      if (!response.ok) {
+        throw new Error(data.message || "Stripe checkout could not be created.");
+      }
 
-    savePayment(currentUser.email, payment);
-    setSavedPayment(payment);
-    setShowCheckout(false);
-    setMessage(`${plan.name} plan is now ${payment.status.toLowerCase()}.`);
+      window.location.href = data.url;
+    } catch (error) {
+      setMessage(error.message);
+      setMessageType("error");
+      setRedirectingPlan("");
+    }
   }
 
   if (!currentUser) {
@@ -146,7 +186,7 @@ function PaymentPage({ currentUser, onLogout, onNavigate }) {
             <h1>Subscription Plans</h1>
             <p>
               Choose a plan for detections, reports, exports, and analytics.
-              Paid plans open a demo checkout that can later connect to Stripe or PayPal.
+              Paid plans redirect to Stripe Checkout so the payment is completed securely outside the app.
             </p>
           </div>
           <button className="secondary-btn" onClick={() => onNavigate("home")}>
@@ -167,73 +207,15 @@ function PaymentPage({ currentUser, onLogout, onNavigate }) {
               <button
                 className={item.id === "basic" ? "secondary-btn full-width" : "primary-btn full-width"}
                 onClick={() => choosePlan(item.id)}
+                disabled={Boolean(redirectingPlan)}
               >
-                {item.id === "basic" ? "Use Basic Plan" : `Choose ${item.name}`}
+                {redirectingPlan === item.id ? "Redirecting to Stripe..." : item.id === "basic" ? "Use Basic Plan" : `Choose ${item.name}`}
               </button>
             </div>
           ))}
         </section>
 
-        {message && <p className="payment-success">{message}</p>}
-
-        {showCheckout && (
-          <section className="payment-layout">
-          <form className="payment-form" onSubmit={completePayment}>
-            <h2>{plan.name} checkout</h2>
-            <p className="muted-text">Use any demo card information. No real payment is processed.</p>
-
-            <label htmlFor="card-name">Cardholder name</label>
-            <input
-              id="card-name"
-              required
-              value={cardName}
-              onChange={(event) => setCardName(event.target.value)}
-            />
-
-            <label htmlFor="card-number">Card number</label>
-            <input
-              id="card-number"
-              inputMode="numeric"
-              maxLength="16"
-              placeholder="4242424242424242"
-              required
-              value={cardNumber}
-              onChange={(event) => setCardNumber(event.target.value.replace(/\D/g, ""))}
-            />
-
-            <div className="payment-fields">
-              <div>
-                <label htmlFor="expiry">Expiry</label>
-                <input
-                  id="expiry"
-                  placeholder="12/28"
-                  required
-                  value={expiry}
-                  onChange={(event) => setExpiry(event.target.value)}
-                />
-              </div>
-              <div>
-                <label htmlFor="cvv">CVV</label>
-                <input id="cvv" inputMode="numeric" maxLength="3" placeholder="123" required />
-              </div>
-            </div>
-
-            <button className="primary-btn full-width" type="submit">
-              Confirm Demo Payment
-            </button>
-            <button className="secondary-btn full-width" type="button" onClick={() => setShowCheckout(false)}>
-              Back to Plans
-            </button>
-          </form>
-
-          <aside className="payment-summary">
-            <span className="eyebrow">Checkout summary</span>
-            <h2>{plan.name}</h2>
-            <p><strong>Price:</strong> {plan.price}</p>
-            <p><strong>User:</strong> {currentUser.email}</p>
-          </aside>
-          </section>
-        )}
+        {message && <p className={messageType === "error" ? "payment-error" : "payment-success"}>{message}</p>}
 
         <section className="activity-panel">
           <div>
@@ -242,8 +224,12 @@ function PaymentPage({ currentUser, onLogout, onNavigate }) {
               <div className="subscription-details">
                 <p><strong>Plan:</strong> {savedPayment.planName}</p>
                 <p><strong>Status:</strong> {savedPayment.status}</p>
-                <p><strong>Paid on:</strong> {savedPayment.paidAt}</p>
-                <p><strong>Expires on:</strong> {getExpiryDate(savedPayment)}</p>
+                {savedPayment.planId !== "basic" && (
+                  <>
+                    <p><strong>Paid on:</strong> {savedPayment.paidAt}</p>
+                    <p><strong>Expires on:</strong> {getExpiryDate(savedPayment)}</p>
+                  </>
+                )}
               </div>
             ) : (
               <p>No plan has been selected yet.</p>

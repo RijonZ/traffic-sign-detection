@@ -7,6 +7,7 @@ import "../styles/dashboard.css";
 const USERS_KEY = "traffic-sign-users";
 const HISTORY_KEY = "traffic-sign-detections";
 const API_BASE_URL = "http://localhost:5000/api";
+const ADMIN_REFRESH_INTERVAL = 2000;
 
 const sampleUsers = [
   { name: "Admin", email: "admin@trafficsign.ai", role: "Administrator" },
@@ -74,14 +75,18 @@ function AdminDashboard({ currentUser, onLogout, onNavigate }) {
 
     loadUsers();
     loadDashboard();
-    const refreshTimer = window.setInterval(loadUsers, 5000);
-    const dashboardRefreshTimer = window.setInterval(loadDashboard, 5000);
+    window.addEventListener("focus", loadUsers);
+    window.addEventListener("focus", loadDashboard);
+    const refreshTimer = window.setInterval(loadUsers, ADMIN_REFRESH_INTERVAL);
+    const dashboardRefreshTimer = window.setInterval(loadDashboard, ADMIN_REFRESH_INTERVAL);
 
     return () => {
+      window.removeEventListener("focus", loadUsers);
+      window.removeEventListener("focus", loadDashboard);
       window.clearInterval(refreshTimer);
       window.clearInterval(dashboardRefreshTimer);
     };
-  }, [currentUser, fallbackDetections.length, fallbackUsers]);
+  }, [currentUser, fallbackDetections.length]);
 
   const managers = users.filter((user) => user.role === "Manager").length;
   const regularUsers = users.filter((user) => user.role === "User").length;

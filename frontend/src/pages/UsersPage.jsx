@@ -6,6 +6,7 @@ import "../styles/users.css";
 
 const USERS_KEY = "traffic-sign-users";
 const API_BASE_URL = "http://localhost:5000/api";
+const USERS_REFRESH_INTERVAL = 2000;
 
 const defaultUsers = [
   { name: "Admin", email: "admin@trafficsign.ai", role: "Administrator" },
@@ -43,10 +44,14 @@ function UsersPage({ currentUser, onLogout, onNavigate }) {
     }
 
     loadUsers();
-    const refreshTimer = window.setInterval(loadUsers, 5000);
+    window.addEventListener("focus", loadUsers);
+    const refreshTimer = window.setInterval(loadUsers, USERS_REFRESH_INTERVAL);
 
-    return () => window.clearInterval(refreshTimer);
-  }, [currentUser, fallbackUsers]);
+    return () => {
+      window.removeEventListener("focus", loadUsers);
+      window.clearInterval(refreshTimer);
+    };
+  }, [currentUser]);
 
   const admins = users.filter((user) => user.role === "Administrator").length;
   const managers = users.filter((user) => user.role === "Manager").length;
