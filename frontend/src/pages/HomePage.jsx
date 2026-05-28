@@ -1,5 +1,8 @@
+import { useEffect, useState } from "react";
 import Navbar from "../shared/Navbar";
 import "../styles/home.css";
+
+const API_BASE_URL = "http://localhost:5000/api";
 
 const roleActions = {
   Administrator: [
@@ -16,15 +19,36 @@ const roleActions = {
   ],
 };
 
-const roleCards = {
-  Administrator: ["Manage users", "Review detections", "Check system reports"],
-  Manager: ["Monitor analytics", "Review reports", "Export detection data"],
-  User: ["Upload image", "Review prediction", "Download report"],
-};
-
 function HomePage({ currentUser, onLogout, onNavigate }) {
   const actions = currentUser ? roleActions[currentUser.role] || roleActions.User : [];
-  const cardItems = currentUser ? roleCards[currentUser.role] || roleCards.User : [];
+  const [homeData, setHomeData] = useState(null);
+
+  useEffect(() => {
+    const emailQuery = currentUser?.email ? `?email=${encodeURIComponent(currentUser.email)}` : "";
+
+    fetch(`${API_BASE_URL}/home${emailQuery}`)
+      .then((response) => response.json())
+      .then((data) => setHomeData(data))
+      .catch(() => setHomeData(null));
+  }, [currentUser]);
+
+  const userStats = homeData?.userStats;
+  const featureCards = homeData?.features || [
+    {
+      title: "Fast Detection",
+      description: "Run traffic sign predictions from a clean upload workflow.",
+    },
+    {
+      title: "Prediction Result",
+      description: "Review detected sign labels with confidence score context.",
+    },
+    {
+      title: "Detection History",
+      description: "Keep previous detection requests available for follow-up review.",
+      page: "history",
+      actionLabel: "Open history",
+    },
+  ];
 
   return (
     <div className="home">
@@ -41,7 +65,7 @@ function HomePage({ currentUser, onLogout, onNavigate }) {
 
           <p>
             {currentUser
-              ? `You are signed in as ${currentUser.role}. Continue from your project workspace.`
+              ? `You are signed in as ${userStats?.role || currentUser.role}. Continue from your project workspace.`
               : "Upload road images, classify traffic signs, and review prediction confidence from a focused detection dashboard."}
           </p>
 
@@ -72,7 +96,11 @@ function HomePage({ currentUser, onLogout, onNavigate }) {
         <div className="hero-card">
           <span className="status-pill">{currentUser ? currentUser.role : "Detection workflow"}</span>
           <h3>{currentUser ? "Your workspace" : "How it works"}</h3>
-          {(currentUser ? cardItems : ["Upload a road image", "Review model prediction", "Track the result"]).map(
+          {(currentUser ? [
+            `${userStats?.totalDetections ?? 0} saved detections`,
+            `Latest: ${userStats?.latestSign || "No detection yet"}`,
+            `${userStats?.activePlan || "Basic"} plan`,
+          ] : ["Upload a road image", "Review model prediction", "Track the result"]).map(
             (item, index) => <p key={item}>{index + 1}. {item}</p>
           )}
           <button
@@ -85,23 +113,17 @@ function HomePage({ currentUser, onLogout, onNavigate }) {
       </section>
 
       <section className="features" id="features">
-        <div>
-          <h3>Fast Detection</h3>
-          <p>Run traffic sign predictions from a clean upload workflow.</p>
-        </div>
-
-        <div>
-          <h3>Prediction Result</h3>
-          <p>Review detected sign labels with confidence score context.</p>
-        </div>
-
-        <div>
-          <h3>Detection History</h3>
-          <p>Keep previous detection requests available for follow-up review.</p>
-          <button className="text-btn" onClick={() => onNavigate("history")}>
-            Open history
-          </button>
-        </div>
+        {featureCards.map((feature) => (
+          <div key={feature.title}>
+            <h3>{feature.title}</h3>
+            <p>{feature.description}</p>
+            {feature.page && (
+              <button className="text-btn" onClick={() => onNavigate(feature.page)}>
+                {feature.actionLabel}
+              </button>
+            )}
+          </div>
+        ))}
       </section>
     </div>
   );

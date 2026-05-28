@@ -23,6 +23,7 @@ const {
   markAllAsRead,
   markAsRead,
 } = require("../controllers/notificationController");
+const { getHome } = require("../controllers/homeController");
 const {
   confirmStripeCheckoutSession,
   createStripeCheckoutSession,
@@ -31,6 +32,7 @@ const { sendJson, sendOptions, notFound } = require("../utils/http");
 
 const routes = [
   { method: "GET", path: /^\/api\/health$/, handler: (_, response) => sendJson(response, 200, { ok: true }) },
+  { method: "GET", path: /^\/api\/home$/, handler: getHome },
   { method: "POST", path: /^\/api\/auth\/login$/, handler: login },
   { method: "POST", path: /^\/api\/auth\/signup$/, handler: signup },
   { method: "POST", path: /^\/api\/auth\/logout$/, handler: logout },
