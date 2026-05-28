@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Navbar from "../shared/Navbar";
 import { downloadReportPdf } from "../utils/reportPdf";
 import "../styles/auth.css";
@@ -7,6 +7,7 @@ import "../styles/history.css";
 import "../styles/reports.css";
 
 const HISTORY_KEY = "traffic-sign-detections";
+const API_BASE_URL = "http://localhost:5000/api";
 
 const sampleReports = [
   {
@@ -57,13 +58,42 @@ function readReports() {
 }
 
 function MyReports({ currentUser, onLogout, onNavigate }) {
-  const reports = useMemo(readReports, []);
-  const [selectedReport, setSelectedReport] = useState(reports[0]);
+  const fallbackReports = useMemo(readReports, []);
+  const [reports, setReports] = useState(fallbackReports);
+  const [selectedReport, setSelectedReport] = useState(fallbackReports[0]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
+
+  useEffect(() => {
+    if (!currentUser) {
+      return;
+    }
+
+    setIsLoading(true);
+    setStatusMessage("");
+
+    fetch(`${API_BASE_URL}/users/${encodeURIComponent(currentUser.email)}/reports`)
+      .then((response) => (response.ok ? response.json() : Promise.reject()))
+      .then((data) => {
+        const backendReports = data?.reports || [];
+        setReports(backendReports);
+        setSelectedReport(backendReports[0] || null);
+      })
+      .catch(() => {
+        setReports(fallbackReports);
+        setSelectedReport(fallbackReports[0] || null);
+        setStatusMessage("Backend reports are not available, showing saved demo reports.");
+      })
+      .finally(() => setIsLoading(false));
+  }, [currentUser, fallbackReports]);
 
   const completedCount = reports.filter((report) => report.status === "Completed").length;
-  const averageConfidence = Math.round(
-    reports.reduce((total, report) => total + Number(report.confidence || 0), 0) / reports.length
-  );
+  const averageConfidence = reports.length
+    ? Math.round(
+        reports.reduce((total, report) => total + Number(report.confidence || 0), 0) /
+          reports.length
+      )
+    : 0;
 
   function downloadReport(report) {
     downloadReportPdf(
@@ -123,6 +153,8 @@ function MyReports({ currentUser, onLogout, onNavigate }) {
           </div>
         </section>
 
+        {statusMessage && <p className="report-status-message">{statusMessage}</p>}
+
         <section className="reports-layout">
           <div className="history-table">
             <div className="report-row report-head">
@@ -133,7 +165,17 @@ function MyReports({ currentUser, onLogout, onNavigate }) {
               <p>Action</p>
             </div>
 
-            {reports.map((report) => (
+            {isLoading && (
+              <div className="report-row">
+                <p>Loading</p>
+                <p>Backend reports</p>
+                <p>Please wait</p>
+                <p><span className="status-pill">Loading</span></p>
+                <p>-</p>
+              </div>
+            )}
+
+            {!isLoading && reports.map((report) => (
               <div className="report-row" key={report.id}>
                 <p>{report.id}</p>
                 <p>{report.fileName}</p>
@@ -146,19 +188,35 @@ function MyReports({ currentUser, onLogout, onNavigate }) {
                 </button>
               </div>
             ))}
+
+            {!isLoading && !reports.length && (
+              <div className="report-row">
+                <p>No reports</p>
+                <p>-</p>
+                <p>-</p>
+                <p><span className="status-pill">Empty</span></p>
+                <p>-</p>
+              </div>
+            )}
           </div>
 
           <aside className="report-detail">
             <span className="eyebrow">Selected report</span>
-            <h2>{selectedReport.id}</h2>
-            <p><strong>Image:</strong> {selectedReport.fileName}</p>
-            <p><strong>Detected sign:</strong> {selectedReport.sign}</p>
-            <p><strong>Category:</strong> {selectedReport.category}</p>
-            <p><strong>Confidence:</strong> {selectedReport.confidence}%</p>
-            <p><strong>Date:</strong> {selectedReport.createdAt}</p>
-            <button className="primary-btn full-width" onClick={() => downloadReport(selectedReport)}>
-              Download Report
-            </button>
+            {selectedReport ? (
+              <>
+                <h2>{selectedReport.id}</h2>
+                <p><strong>Image:</strong> {selectedReport.fileName}</p>
+                <p><strong>Detected sign:</strong> {selectedReport.sign}</p>
+                <p><strong>Category:</strong> {selectedReport.category}</p>
+                <p><strong>Confidence:</strong> {selectedReport.confidence}%</p>
+                <p><strong>Date:</strong> {selectedReport.createdAt}</p>
+                <button className="primary-btn full-width" onClick={() => downloadReport(selectedReport)}>
+                  Download Report
+                </button>
+              </>
+            ) : (
+              <p>No report selected.</p>
+            )}
           </aside>
         </section>
       </main>

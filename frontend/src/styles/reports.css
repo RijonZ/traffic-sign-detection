@@ -33,6 +33,15 @@
   color: #1f2937;
 }
 
+.report-status-message {
+  background-color: #eef6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  color: #1e3a8a;
+  margin: 0 0 18px;
+  padding: 12px 14px;
+}
+
 .report-detail {
   background-color: white;
   border: 1px solid #e8edf5;
