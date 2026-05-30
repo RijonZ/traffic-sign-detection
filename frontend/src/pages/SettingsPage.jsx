@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Navbar from "../shared/Navbar";
 import "../styles/auth.css";
 import "../styles/dashboard.css";
 import "../styles/settings.css";
 
 const SETTINGS_KEY = "traffic-sign-settings";
+const API_BASE_URL = "http://localhost:5000/api";
 
 const defaultSettings = {
   maxUploadSize: "5",
@@ -16,7 +17,7 @@ const defaultSettings = {
   maintenanceMode: false,
 };
 
-function readSettings() {
+function readLocalSettings() {
   return {
     ...defaultSettings,
     ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}"),
@@ -24,25 +25,92 @@ function readSettings() {
 }
 
 function SettingsPage({ currentUser, onLogout, onNavigate }) {
-  const initialSettings = useMemo(readSettings, []);
-  const [settings, setSettings] = useState(initialSettings);
+  const fallbackSettings = useMemo(readLocalSettings, []);
+  const [settings, setSettings] = useState(fallbackSettings);
+  const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("success");
+
+  useEffect(() => {
+    if (!currentUser || currentUser.role !== "Administrator") return;
+
+    fetch(`${API_BASE_URL}/admin/settings?adminEmail=${encodeURIComponent(currentUser.email)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) {
+          setSettings(data);
+          localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
+        }
+      })
+      .catch(() => {});
+  }, [currentUser]);
 
   function updateSetting(key, value) {
-    setSettings((currentSettings) => ({ ...currentSettings, [key]: value }));
+    setSettings((prev) => ({ ...prev, [key]: value }));
     setMessage("");
   }
 
-  function saveSettings(event) {
+  async function saveSettings(event) {
     event.preventDefault();
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-    setMessage("Settings saved for this demo workspace.");
+    setSaving(true);
+    setMessage("");
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/admin/settings?adminEmail=${encodeURIComponent(currentUser.email)}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(settings),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        setMessageType("error");
+        setMessage(data.message || "Could not save settings.");
+        return;
+      }
+      setSettings(data);
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
+      setMessageType("success");
+      setMessage("Settings saved successfully.");
+    } catch {
+      setMessageType("error");
+      setMessage("Could not connect to server.");
+    } finally {
+      setSaving(false);
+    }
   }
 
-  function resetSettings() {
-    setSettings(defaultSettings);
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(defaultSettings));
-    setMessage("Default settings restored.");
+  async function resetSettings() {
+    setSaving(true);
+    setMessage("");
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/admin/settings?adminEmail=${encodeURIComponent(currentUser.email)}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(defaultSettings),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        setMessageType("error");
+        setMessage(data.message || "Could not reset settings.");
+        return;
+      }
+      setSettings(data);
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
+      setMessageType("success");
+      setMessage("Default settings restored.");
+    } catch {
+      setSettings(defaultSettings);
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(defaultSettings));
+      setMessageType("success");
+      setMessage("Default settings restored locally.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (!currentUser) {
@@ -205,20 +273,24 @@ function SettingsPage({ currentUser, onLogout, onNavigate }) {
           <section className="settings-actions">
             <div>
               <h3>Apply Configuration</h3>
-              <p>These values represent the future records from the `settings` table.</p>
+              <p>Settings are saved in the database and shared across all admin sessions.</p>
             </div>
             <div className="settings-buttons">
-              <button className="secondary-btn" type="button" onClick={resetSettings}>
+              <button className="secondary-btn" type="button" disabled={saving} onClick={resetSettings}>
                 Reset Defaults
               </button>
-              <button className="primary-btn" type="submit">
-                Save Settings
+              <button className="primary-btn" type="submit" disabled={saving}>
+                {saving ? "Saving…" : "Save Settings"}
               </button>
             </div>
           </section>
         </form>
 
-        {message && <p className="settings-message">{message}</p>}
+        {message && (
+          <p className={messageType === "error" ? "auth-error" : "settings-message"}>
+            {message}
+          </p>
+        )}
       </main>
     </div>
   );

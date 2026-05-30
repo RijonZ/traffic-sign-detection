@@ -4,6 +4,7 @@ const { getAllDetections } = require("../services/detectionService");
 const { getModelMonitoringSummary } = require("../services/modelMonitoringService");
 const { getAllReports } = require("../services/reportService");
 const { findUserByEmail, getAllUsers, getUsersSummaryFromList, updateUser, deleteUser } = require("../services/userService");
+const { getSettings, updateSettings } = require("../services/settingsService");
 const { sendJson, readBody } = require("../utils/http");
 
 async function getAdminUser(request) {
@@ -27,7 +28,7 @@ async function getModelMonitoring(request, response) {
     return;
   }
 
-  sendJson(response, 200, getModelMonitoringSummary());
+  sendJson(response, 200, await getModelMonitoringSummary());
 }
 
 async function getAdminReports(request, response) {
@@ -103,6 +104,22 @@ async function deleteAdminUser(request, response, params) {
   sendJson(response, 200, { ok: true });
 }
 
+async function getAdminSettings(request, response) {
+  if (!(await ensureAdministrator(request, response))) return;
+  sendJson(response, 200, await getSettings());
+}
+
+async function updateAdminSettings(request, response) {
+  if (!(await ensureAdministrator(request, response))) return;
+  try {
+    const updates = await readBody(request);
+    const saved = await updateSettings(updates);
+    sendJson(response, 200, saved);
+  } catch {
+    sendJson(response, 400, { message: "Invalid request body." });
+  }
+}
+
 module.exports = {
   getAdminAuditLogs,
   getAdminDashboardSummary,
@@ -112,4 +129,6 @@ module.exports = {
   getModelMonitoring,
   updateAdminUser,
   deleteAdminUser,
+  getAdminSettings,
+  updateAdminSettings,
 };

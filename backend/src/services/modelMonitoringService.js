@@ -1,4 +1,4 @@
-const { detections } = require("../data/store");
+const { query } = require("../db/client");
 
 const modelChecks = [
   {
@@ -14,7 +14,7 @@ const modelChecks = [
   {
     name: "Result storage",
     status: "Active",
-    detail: "Detection results are saved in backend history.",
+    detail: "Detection results are saved in the database.",
   },
   {
     name: "Notification flow",
@@ -23,28 +23,42 @@ const modelChecks = [
   },
 ];
 
-function getCategoryCounts(items) {
-  return items.reduce((groups, item) => {
-    const category = item.category || "Unknown";
-    return { ...groups, [category]: (groups[category] || 0) + 1 };
-  }, {});
-}
+async function getModelMonitoringSummary() {
+  const metricsResult = await query(
+    `
+      SELECT
+        COUNT(*)                                          AS total_requests,
+        COUNT(*) FILTER (WHERE dr.status = 'rejected')   AS rejected,
+        COALESCE(ROUND(AVG(res.confidence)), 0)          AS average_confidence
+      FROM detection_requests dr
+      LEFT JOIN detection_results res ON res.request_id = dr.id
+    `
+  );
 
-function getAverageConfidence(items) {
-  if (!items.length) {
-    return 0;
-  }
+  const categoriesResult = await query(
+    `
+      SELECT
+        COALESCE(ts.category, 'Unknown') AS category,
+        COUNT(*)                          AS cnt
+      FROM detection_requests dr
+      LEFT JOIN detection_results res ON res.request_id = dr.id
+      LEFT JOIN traffic_signs ts      ON ts.id = res.traffic_sign_id
+      GROUP BY ts.category
+      ORDER BY cnt DESC
+    `
+  );
 
-  const totalConfidence = items.reduce((total, item) => total + Number(item.confidence || 0), 0);
-  return Math.round(totalConfidence / items.length);
-}
-
-function getModelMonitoringSummary() {
-  const totalRequests = detections.length;
-  const completed = detections.filter((item) => item.status !== "Rejected").length;
-  const rejected = totalRequests - completed;
-  const averageConfidence = getAverageConfidence(detections);
+  const row = metricsResult.rows[0];
+  const totalRequests = parseInt(row.total_requests, 10);
+  const rejected = parseInt(row.rejected, 10);
+  const completed = totalRequests - rejected;
+  const averageConfidence = parseInt(row.average_confidence, 10);
   const modelAccuracy = Math.max(averageConfidence - rejected * 2, 0);
+
+  const categories = {};
+  for (const catRow of categoriesResult.rows) {
+    categories[catRow.category] = parseInt(catRow.cnt, 10);
+  }
 
   return {
     metrics: {
@@ -55,8 +69,7 @@ function getModelMonitoringSummary() {
       totalRequests,
     },
     checks: modelChecks,
-    categories: getCategoryCounts(detections),
-    recentDetections: detections.slice(0, 5),
+    categories,
   };
 }
 
