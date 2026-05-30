@@ -3,8 +3,8 @@ const { getAdminDashboard } = require("../services/adminDashboardService");
 const { getAllDetections } = require("../services/detectionService");
 const { getModelMonitoringSummary } = require("../services/modelMonitoringService");
 const { getAllReports } = require("../services/reportService");
-const { findUserByEmail, getAllUsers, getUsersSummaryFromList } = require("../services/userService");
-const { sendJson } = require("../utils/http");
+const { findUserByEmail, getAllUsers, getUsersSummaryFromList, updateUser, deleteUser } = require("../services/userService");
+const { sendJson, readBody } = require("../utils/http");
 
 async function getAdminUser(request) {
   const url = new URL(request.url, `http://${request.headers.host}`);
@@ -74,6 +74,35 @@ async function getAdminUsers(request, response) {
   });
 }
 
+async function updateAdminUser(request, response, params) {
+  if (!(await ensureAdministrator(request, response))) return;
+
+  const userId = params[0];
+  try {
+    const { role, isActive } = await readBody(request);
+    const result = await updateUser(userId, { role, isActive });
+    if (!result.ok) {
+      sendJson(response, 400, { message: result.message });
+      return;
+    }
+    sendJson(response, 200, { ok: true });
+  } catch (error) {
+    sendJson(response, 400, { message: "Invalid request body." });
+  }
+}
+
+async function deleteAdminUser(request, response, params) {
+  if (!(await ensureAdministrator(request, response))) return;
+
+  const userId = params[0];
+  const result = await deleteUser(userId);
+  if (!result.ok) {
+    sendJson(response, 400, { message: result.message });
+    return;
+  }
+  sendJson(response, 200, { ok: true });
+}
+
 module.exports = {
   getAdminAuditLogs,
   getAdminDashboardSummary,
@@ -81,4 +110,6 @@ module.exports = {
   getAdminReports,
   getAdminUsers,
   getModelMonitoring,
+  updateAdminUser,
+  deleteAdminUser,
 };

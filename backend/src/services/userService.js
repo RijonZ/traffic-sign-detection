@@ -81,12 +81,8 @@ async function getAllUsers() {
 }
 
 async function getUsersSummary() {
-  return {
-    totalUsers: 0,
-    administrators: 0,
-    managers: 0,
-    users: 0,
-  };
+  const users = await getAllUsers();
+  return getUsersSummaryFromList(users);
 }
 
 function getUsersSummaryFromList(users) {
@@ -218,6 +214,78 @@ async function createUserAccount(name, email, password) {
   };
 }
 
+async function getAdminCount() {
+  const result = await query(
+    `SELECT COUNT(*) AS cnt
+     FROM user_roles ur
+     JOIN roles r ON r.id = ur.role_id
+     WHERE r.name = 'Administrator'`
+  );
+  return parseInt(result.rows[0].cnt, 10);
+}
+
+async function getUserRoleName(userId) {
+  const result = await query(
+    `SELECT r.name
+     FROM user_roles ur
+     JOIN roles r ON r.id = ur.role_id
+     WHERE ur.user_id = $1
+     LIMIT 1`,
+    [userId]
+  );
+  return result.rows[0]?.name || "User";
+}
+
+const VALID_ROLES = ["Administrator", "Manager", "User"];
+
+async function updateUser(userId, { role, isActive }) {
+  if (role !== undefined) {
+    if (!VALID_ROLES.includes(role)) {
+      return { ok: false, message: "Invalid role. Must be Administrator, Manager, or User." };
+    }
+    if (role !== "Administrator") {
+      const currentRole = await getUserRoleName(userId);
+      if (currentRole === "Administrator" && (await getAdminCount()) <= 1) {
+        return { ok: false, message: "Cannot demote the last administrator." };
+      }
+    }
+  }
+
+  if (isActive !== undefined) {
+    await query(
+      `UPDATE users SET is_active = $1, updated_at = now() WHERE id = $2`,
+      [isActive, userId]
+    );
+    if (!isActive) {
+      await query(
+        `UPDATE refresh_tokens SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`,
+        [userId]
+      );
+    }
+  }
+
+  if (role) {
+    const roleId = await ensureRole(role);
+    await query(`DELETE FROM user_roles WHERE user_id = $1`, [userId]);
+    await query(
+      `INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+      [userId, roleId]
+    );
+  }
+
+  return { ok: true };
+}
+
+async function deleteUser(userId) {
+  const currentRole = await getUserRoleName(userId);
+  if (currentRole === "Administrator" && (await getAdminCount()) <= 1) {
+    return { ok: false, message: "Cannot delete the last administrator." };
+  }
+
+  await query(`DELETE FROM users WHERE id = $1`, [userId]);
+  return { ok: true };
+}
+
 async function revokeLoginSession(sessionToken) {
   if (!sessionToken) {
     return;
@@ -254,8 +322,10 @@ module.exports = {
   findUserByEmail,
   createUserAccount,
   getAllUsers,
-  getUsersSummaryFromList,
   getUsersSummary,
+  getUsersSummaryFromList,
+  updateUser,
+  deleteUser,
   revokeLoginSession,
   validateLogin,
 };

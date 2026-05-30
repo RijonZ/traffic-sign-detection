@@ -2,7 +2,7 @@ function sendJson(response, statusCode, data) {
   response.writeHead(statusCode, {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "Content-Type",
-    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+    "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
     "Content-Type": "application/json",
   });
   response.end(JSON.stringify(data));

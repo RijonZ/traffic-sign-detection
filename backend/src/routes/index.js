@@ -7,6 +7,8 @@ const {
   getAdminReports,
   getAdminUsers,
   getModelMonitoring,
+  updateAdminUser,
+  deleteAdminUser,
 } = require("../controllers/adminController");
 const {
   createDetectSignRequest,
@@ -47,6 +49,8 @@ const routes = [
   { method: "GET", path: /^\/api\/admin\/detections$/, handler: getAdminDetections },
   { method: "GET", path: /^\/api\/admin\/reports$/, handler: getAdminReports },
   { method: "GET", path: /^\/api\/admin\/users$/, handler: getAdminUsers },
+  { method: "PUT", path: /^\/api\/admin\/users\/([^/]+)$/, handler: updateAdminUser },
+  { method: "DELETE", path: /^\/api\/admin\/users\/([^/]+)$/, handler: deleteAdminUser },
   { method: "GET", path: /^\/api\/users\/([^/]+)\/dashboard$/, handler: getDashboard },
   { method: "GET", path: /^\/api\/users\/([^/]+)\/detections$/, handler: getDetections },
   { method: "POST", path: /^\/api\/users\/([^/]+)\/detections$/, handler: createDetection },
