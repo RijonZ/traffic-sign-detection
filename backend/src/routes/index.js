@@ -28,6 +28,7 @@ const {
   markAsRead,
 } = require("../controllers/notificationController");
 const { getHome } = require("../controllers/homeController");
+const { updateUserProfile } = require("../controllers/userController");
 const {
   confirmStripeCheckoutSession,
   createStripeCheckoutSession,
@@ -55,6 +56,7 @@ const routes = [
   { method: "DELETE", path: /^\/api\/admin\/users\/([^/]+)$/, handler: deleteAdminUser },
   { method: "GET", path: /^\/api\/admin\/settings$/, handler: getAdminSettings },
   { method: "PUT", path: /^\/api\/admin\/settings$/, handler: updateAdminSettings },
+  { method: "PUT", path: /^\/api\/users\/([^/]+)\/profile$/, handler: updateUserProfile },
   { method: "GET", path: /^\/api\/users\/([^/]+)\/dashboard$/, handler: getDashboard },
   { method: "GET", path: /^\/api\/users\/([^/]+)\/detections$/, handler: getDetections },
   { method: "POST", path: /^\/api\/users\/([^/]+)\/detections$/, handler: createDetection },

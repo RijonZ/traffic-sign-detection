@@ -17,6 +17,7 @@ const userLinks = [
   { label: "Detection History", page: "history" },
   { label: "My Reports", page: "my-reports" },
   { label: "Subscription", page: "subscription" },
+  { label: "My Profile", page: "profile" },
 ];
 
 const managerLinks = [
@@ -27,6 +28,7 @@ const managerLinks = [
   { label: "All Detections", page: "all-detections" },
   { label: "Export Data", page: "export-data" },
   { label: "Subscription", page: "subscription" },
+  { label: "My Profile", page: "profile" },
 ];
 
 const adminLinks = [
@@ -39,6 +41,7 @@ const adminLinks = [
   { label: "Model Monitoring", page: "model-monitoring" },
   { label: "Audit Logs", page: "audit-logs" },
   { label: "Settings", page: "settings" },
+  { label: "My Profile", page: "profile" },
 ];
 
 function getLinks(currentUser) {

@@ -15,6 +15,7 @@ import LoginPage from "./pages/LoginPage";
 import ModelMonitoring from "./pages/ModelMonitoring";
 import MyReports from "./pages/MyReports";
 import PaymentPage from "./pages/PaymentPage";
+import ProfilePage from "./pages/ProfilePage";
 import Reports from "./pages/Reports";
 import SettingsPage from "./pages/SettingsPage";
 import UsersPage from "./pages/UsersPage";
@@ -108,6 +109,12 @@ function App() {
     } catch (error) {
       return { ok: false, message: "Backend is not available. Please try again later." };
     }
+  }
+
+  function updateProfile(updatedUser) {
+    const merged = { ...currentUser, ...updatedUser };
+    setCurrentUser(merged);
+    localStorage.setItem(SESSION_KEY, JSON.stringify(merged));
   }
 
   function logout() {
@@ -286,6 +293,17 @@ function App() {
         currentUser={currentUser}
         onLogout={logout}
         onNavigate={navigate}
+      />
+    );
+  }
+
+  if (page === "profile") {
+    return (
+      <ProfilePage
+        currentUser={currentUser}
+        onLogout={logout}
+        onNavigate={navigate}
+        onUpdateProfile={updateProfile}
       />
     );
   }

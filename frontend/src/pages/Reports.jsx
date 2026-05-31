@@ -64,7 +64,7 @@ function readReports() {
 function Reports({ currentUser, onLogout, onNavigate }) {
   const fallbackReports = useMemo(readReports, []);
   const [reports, setReports] = useState(fallbackReports);
-  const [selectedReport, setSelectedReport] = useState(fallbackReports[0]);
+  const [selectedReport, setSelectedReport] = useState(null);
 
   useEffect(() => {
     if (!currentUser || currentUser.role !== "Administrator") {
@@ -76,12 +76,10 @@ function Reports({ currentUser, onLogout, onNavigate }) {
       .then((data) => {
         if (data?.reports?.length) {
           setReports(data.reports);
-          setSelectedReport(data.reports[0]);
         }
       })
       .catch(() => {
         setReports(fallbackReports);
-        setSelectedReport(fallbackReports[0]);
       });
   }, [currentUser, fallbackReports]);
 
@@ -169,52 +167,55 @@ function Reports({ currentUser, onLogout, onNavigate }) {
           </div>
         </section>
 
-        <section className="admin-report-layout">
-          <div className="history-table">
-            <div className="admin-report-row admin-report-head">
-              <p>Report ID</p>
-              <p>Image</p>
-              <p>User</p>
-              <p>Sign</p>
-              <p>Status</p>
-              <p>Action</p>
-            </div>
-
-            {reports.map((report) => (
-              <div className="admin-report-row" key={report.id}>
-                <p>{report.id}</p>
-                <p>{report.fileName}</p>
-                <p>{report.requestedBy}</p>
-                <p>{report.sign}</p>
-                <p><span className="status-pill">{report.status}</span></p>
-                <button className="secondary-btn" onClick={() => setSelectedReport(report)}>
-                  View
-                </button>
-              </div>
-            ))}
+        <section className="history-table">
+          <div className="admin-report-row admin-report-head">
+            <p>Report ID</p>
+            <p>Image</p>
+            <p>User</p>
+            <p>Sign</p>
+            <p>Status</p>
+            <p>Action</p>
           </div>
 
-          <aside className="report-detail">
-            <span className="eyebrow">Selected report</span>
-            {selectedReport ? (
-              <>
-                <h2>{selectedReport.id}</h2>
-                <p><strong>Image:</strong> {selectedReport.fileName}</p>
-                <p><strong>User:</strong> {selectedReport.requestedBy}</p>
-                <p><strong>Detected sign:</strong> {selectedReport.sign}</p>
-                <p><strong>Category:</strong> {selectedReport.category}</p>
-                <p><strong>Confidence:</strong> {selectedReport.confidence}%</p>
-                <p><strong>Status:</strong> {selectedReport.status}</p>
-                <p><strong>Date:</strong> {selectedReport.createdAt}</p>
-                <button className="primary-btn full-width" onClick={() => downloadReport(selectedReport)}>
-                  Download Report
-                </button>
-              </>
-            ) : (
-              <p>No reports available.</p>
-            )}
-          </aside>
+          {reports.map((report) => (
+            <div className="admin-report-row" key={report.id}>
+              <p>{report.id}</p>
+              <p>{report.fileName}</p>
+              <p>{report.requestedBy}</p>
+              <p>{report.sign}</p>
+              <p><span className="status-pill">{report.status}</span></p>
+              <button className="secondary-btn" onClick={() => setSelectedReport(report)}>
+                View
+              </button>
+            </div>
+          ))}
         </section>
+
+        {selectedReport && (
+          <div className="report-modal-overlay" onClick={() => setSelectedReport(null)}>
+            <div className="report-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="report-modal-header">
+                <span className="eyebrow">Report detail</span>
+                <button className="report-modal-close" onClick={() => setSelectedReport(null)}>✕</button>
+              </div>
+              <h2>{selectedReport.id}</h2>
+              <p><strong>Image:</strong> {selectedReport.fileName}</p>
+              <p><strong>User:</strong> {selectedReport.requestedBy}</p>
+              <p><strong>Detected sign:</strong> {selectedReport.sign}</p>
+              <p><strong>Category:</strong> {selectedReport.category}</p>
+              <p><strong>Confidence:</strong> {selectedReport.confidence}%</p>
+              <p><strong>Status:</strong> {selectedReport.status}</p>
+              <p><strong>Date:</strong> {selectedReport.createdAt}</p>
+              <button
+                className="primary-btn"
+                style={{ width: "100%", marginTop: "16px" }}
+                onClick={() => downloadReport(selectedReport)}
+              >
+                Download Report
+              </button>
+            </div>
+          </div>
+        )}
 
         <section className="activity-panel">
           <div>

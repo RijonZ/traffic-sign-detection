@@ -286,6 +286,48 @@ async function deleteUser(userId) {
   return { ok: true };
 }
 
+const NAME_CHANGE_COOLDOWN_HOURS = 24;
+
+async function updateProfile(email, { name, password }) {
+  const user = await findUserByEmail(email);
+  if (!user) return { ok: false, message: "User not found." };
+
+  if (name !== undefined) {
+    const cooldownRow = await query(
+      `SELECT name_changed_at FROM users WHERE id = $1`,
+      [user.id]
+    );
+    const lastChanged = cooldownRow.rows[0]?.name_changed_at;
+    if (lastChanged) {
+      const hoursSince = (Date.now() - new Date(lastChanged).getTime()) / 36e5;
+      if (hoursSince < NAME_CHANGE_COOLDOWN_HOURS) {
+        const hoursLeft = Math.ceil(NAME_CHANGE_COOLDOWN_HOURS - hoursSince);
+        return {
+          ok: false,
+          message: `You can only change your name once every 24 hours. Try again in ${hoursLeft} hour${hoursLeft !== 1 ? "s" : ""}.`,
+          cooldownHoursLeft: hoursLeft,
+        };
+      }
+    }
+
+    const { firstName, lastName } = splitName(name);
+    await query(
+      `UPDATE users SET first_name = $1, last_name = $2, name_changed_at = now(), updated_at = now() WHERE id = $3`,
+      [firstName, lastName, user.id]
+    );
+  }
+
+  if (password !== undefined) {
+    await query(
+      `UPDATE users SET password_hash = $1, updated_at = now() WHERE id = $2`,
+      [password, user.id]
+    );
+  }
+
+  const updated = await findUserByEmail(email);
+  return { ok: true, user: formatUser(updated) };
+}
+
 async function revokeLoginSession(sessionToken) {
   if (!sessionToken) {
     return;
@@ -325,6 +367,7 @@ module.exports = {
   getUsersSummary,
   getUsersSummaryFromList,
   updateUser,
+  updateProfile,
   deleteUser,
   revokeLoginSession,
   validateLogin,

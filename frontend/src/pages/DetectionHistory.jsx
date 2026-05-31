@@ -53,7 +53,7 @@ function formatDetection(item) {
 }
 
 function DetectionHistory({ currentUser, onLogout, onNavigate }) {
-  const [detections, setDetections] = useState(sampleDetections);
+  const [detections, setDetections] = useState(null);
 
   useEffect(() => {
     if (!currentUser) {
@@ -63,11 +63,9 @@ function DetectionHistory({ currentUser, onLogout, onNavigate }) {
     fetch(`${API_BASE_URL}/users/${encodeURIComponent(currentUser.email)}/detections`)
       .then((response) => (response.ok ? response.json() : null))
       .then((data) => {
-        if (data?.detections?.length) {
-          setDetections(data.detections.map(formatDetection));
-        }
+        setDetections(data?.detections ? data.detections.map(formatDetection) : []);
       })
-      .catch(() => setDetections(sampleDetections));
+      .catch(() => setDetections([]));
   }, [currentUser]);
 
   if (!currentUser) {
@@ -113,17 +111,17 @@ function DetectionHistory({ currentUser, onLogout, onNavigate }) {
         <section className="history-summary">
           <div className="dashboard-card">
             <h3>Total Requests</h3>
-            <p>{detections.length}</p>
+            <p>{detections ? detections.length : "—"}</p>
           </div>
 
           <div className="dashboard-card">
             <h3>Completed</h3>
-            <p>{detections.filter((item) => item.status === "Completed").length}</p>
+            <p>{detections ? detections.filter((item) => item.status === "Completed").length : "—"}</p>
           </div>
 
           <div className="dashboard-card">
             <h3>Rejected</h3>
-            <p>{detections.filter((item) => item.status === "Rejected").length}</p>
+            <p>{detections ? detections.filter((item) => item.status === "Rejected").length : "—"}</p>
           </div>
         </section>
 
@@ -137,7 +135,17 @@ function DetectionHistory({ currentUser, onLogout, onNavigate }) {
             <p>Date</p>
           </div>
 
-          {detections.map((detection) => (
+          {detections === null && (
+            <p style={{ padding: "24px 16px", color: "var(--muted, #888)" }}>Loading…</p>
+          )}
+
+          {detections !== null && detections.length === 0 && (
+            <p style={{ padding: "24px 16px", color: "var(--muted, #888)" }}>
+              No detections yet. Upload an image to get started.
+            </p>
+          )}
+
+          {detections !== null && detections.map((detection) => (
             <div className="history-row" key={detection.id}>
               <p>{detection.id}</p>
               <p>{detection.imageName}</p>

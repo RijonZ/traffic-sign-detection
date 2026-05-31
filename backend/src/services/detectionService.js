@@ -230,6 +230,7 @@ async function detectSign(email, file) {
       status: "Rejected",
       box: "",
     });
+
     const { createNotificationForEmail, notifyRoles } = require("./notificationService");
 
     await createNotificationForEmail(

@@ -110,6 +110,59 @@
   color: #1f2937;
 }
 
+.report-modal-overlay {
+  align-items: center;
+  background: rgba(15, 23, 42, 0.45);
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  left: 0;
+  position: fixed;
+  right: 0;
+  top: 0;
+  z-index: 1000;
+}
+
+.report-modal {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.2);
+  max-width: 480px;
+  padding: 28px 32px;
+  width: 90%;
+}
+
+.report-modal h2 {
+  margin: 4px 0 20px;
+}
+
+.report-modal p {
+  color: #4b5563;
+  line-height: 1.6;
+  margin: 6px 0;
+}
+
+.report-modal-header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.report-modal-close {
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 4px 8px;
+}
+
+.report-modal-close:hover {
+  color: #111827;
+}
+
 @media (max-width: 768px) {
   .reports-layout,
   .admin-report-layout,
