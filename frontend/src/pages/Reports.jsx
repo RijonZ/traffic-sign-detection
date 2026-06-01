@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Navbar from "../shared/Navbar";
 import { downloadReportPdf } from "../utils/reportPdf";
+import { statusPillClass } from "../utils/statusUtils";
 import "../styles/auth.css";
 import "../styles/dashboard.css";
 import "../styles/history.css";
@@ -183,7 +184,7 @@ function Reports({ currentUser, onLogout, onNavigate }) {
               <p>{report.fileName}</p>
               <p>{report.requestedBy}</p>
               <p>{report.sign}</p>
-              <p><span className="status-pill">{report.status}</span></p>
+              <p><span className={statusPillClass(report.status)}>{report.status}</span></p>
               <button className="secondary-btn" onClick={() => setSelectedReport(report)}>
                 View
               </button>

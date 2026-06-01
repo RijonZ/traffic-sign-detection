@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Navbar from "../shared/Navbar";
+import { statusPillClass } from "../utils/statusUtils";
 import "../styles/auth.css";
 import "../styles/dashboard.css";
 import "../styles/history.css";
@@ -152,7 +153,7 @@ function DetectionHistory({ currentUser, onLogout, onNavigate }) {
               <p>{detection.sign}</p>
               <p>{detection.confidence}</p>
               <p>
-                <span className="status-pill">{detection.status}</span>
+                <span className={statusPillClass(detection.status)}>{detection.status}</span>
               </p>
               <p>{detection.date}</p>
             </div>

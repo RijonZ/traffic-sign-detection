@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Navbar from "../shared/Navbar";
+import { statusPillClass } from "../utils/statusUtils";
 import "../styles/all-detections.css";
 import "../styles/auth.css";
 import "../styles/dashboard.css";
@@ -217,7 +218,9 @@ function AllDetections({ currentUser, onLogout, onNavigate }) {
               <p>{item.requestedBy}</p>
               <p>{item.sign}</p>
               <p>{item.confidence}%</p>
-              <p><span className="status-pill">{item.status}</span></p>
+              <p>
+                <span className={statusPillClass(item.status)}>{item.status}</span>
+              </p>
             </div>
           ))}
         </section>

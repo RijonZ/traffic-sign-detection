@@ -1,5 +1,39 @@
 const Stripe = require("stripe");
 const { pool, query } = require("../db/client");
+const { getClient: getRedis } = require("../db/redis");
+
+const SUBSCRIPTION_CACHE_TTL = 300;
+
+function subCacheKey(email) {
+  return `sub:payment:${email.toLowerCase()}`;
+}
+
+async function getCachedSubscription(email) {
+  try {
+    const redis = getRedis();
+    if (!redis) return null;
+    const cached = await redis.get(subCacheKey(email));
+    return cached ? (typeof cached === "string" ? JSON.parse(cached) : cached) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function setCachedSubscription(email, data) {
+  try {
+    const redis = getRedis();
+    if (!redis) return;
+    await redis.setex(subCacheKey(email), SUBSCRIPTION_CACHE_TTL, JSON.stringify(data));
+  } catch {}
+}
+
+async function invalidateSubscriptionCache(email) {
+  try {
+    const redis = getRedis();
+    if (!redis) return;
+    await redis.del(subCacheKey(email));
+  } catch {}
+}
 
 const paidPlans = {
   premium: {
@@ -112,6 +146,9 @@ async function createCheckoutSession(userEmail, planId) {
 }
 
 async function getCurrentSubscription(userEmail) {
+  const cached = await getCachedSubscription(userEmail);
+  if (cached) return cached;
+
   const user = await getUserByEmail(userEmail);
 
   if (!user) {
@@ -142,7 +179,9 @@ async function getCurrentSubscription(userEmail) {
   const subscription = result.rows[0];
 
   if (!subscription) {
-    return { ok: true, payment: null };
+    const empty = { ok: true, payment: null };
+    await setCachedSubscription(userEmail, empty);
+    return empty;
   }
 
   const planId = String(subscription.plan_name || "basic").toLowerCase();
@@ -152,7 +191,9 @@ async function getCurrentSubscription(userEmail) {
     amount: Number(subscription.amount || 0) * 100,
   };
 
-  return { ok: true, payment: formatPayment(plan, subscription, subscription) };
+  const result2 = { ok: true, payment: formatPayment(plan, subscription, subscription) };
+  await setCachedSubscription(userEmail, result2);
+  return result2;
 }
 
 async function activateBasicSubscription(userEmail) {
@@ -202,6 +243,7 @@ async function activateDemoSubscription(userEmail, planId) {
     );
 
     await client.query("COMMIT");
+    await invalidateSubscriptionCache(userEmail);
 
     return {
       ok: true,
@@ -276,6 +318,7 @@ async function confirmCheckoutSession(sessionId, userEmail) {
     );
 
     await client.query("COMMIT");
+    await invalidateSubscriptionCache(userEmail);
 
     return { ok: true, payment: formatPayment(plan, subscriptionResult.rows[0], payment) };
   } catch (err) {
@@ -304,6 +347,7 @@ async function cancelSubscription(userEmail) {
     return { ok: false, statusCode: 404, message: "No active subscription found." };
   }
 
+  await invalidateSubscriptionCache(userEmail);
   return { ok: true };
 }
 

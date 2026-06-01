@@ -8,6 +8,7 @@
     "dev": "node src/server.js"
   },
   "dependencies": {
+    "@upstash/redis": "^1.38.0",
     "openai": "^6.39.0",
     "pg": "^8.21.0",
     "stripe": "^22.1.1"

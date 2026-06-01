@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Navbar from "../shared/Navbar";
 import { downloadReportPdf } from "../utils/reportPdf";
+import { statusPillClass } from "../utils/statusUtils";
 import "../styles/auth.css";
 import "../styles/dashboard.css";
 import "../styles/history.css";
@@ -60,7 +61,7 @@ function readReports() {
 function MyReports({ currentUser, onLogout, onNavigate }) {
   const fallbackReports = useMemo(readReports, []);
   const [reports, setReports] = useState(fallbackReports);
-  const [selectedReport, setSelectedReport] = useState(fallbackReports[0]);
+  const [selectedReport, setSelectedReport] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
 
@@ -77,11 +78,9 @@ function MyReports({ currentUser, onLogout, onNavigate }) {
       .then((data) => {
         const backendReports = data?.reports || [];
         setReports(backendReports);
-        setSelectedReport(backendReports[0] || null);
       })
       .catch(() => {
         setReports(fallbackReports);
-        setSelectedReport(fallbackReports[0] || null);
         setStatusMessage("Backend reports are not available, showing saved demo reports.");
       })
       .finally(() => setIsLoading(false));
@@ -155,70 +154,70 @@ function MyReports({ currentUser, onLogout, onNavigate }) {
 
         {statusMessage && <p className="report-status-message">{statusMessage}</p>}
 
-        <section className="reports-layout">
-          <div className="history-table">
-            <div className="report-row report-head">
-              <p>Report ID</p>
-              <p>Image</p>
-              <p>Sign</p>
-              <p>Status</p>
-              <p>Action</p>
-            </div>
-
-            {isLoading && (
-              <div className="report-row">
-                <p>Loading</p>
-                <p>Backend reports</p>
-                <p>Please wait</p>
-                <p><span className="status-pill">Loading</span></p>
-                <p>-</p>
-              </div>
-            )}
-
-            {!isLoading && reports.map((report) => (
-              <div className="report-row" key={report.id}>
-                <p>{report.id}</p>
-                <p>{report.fileName}</p>
-                <p>{report.sign}</p>
-                <p>
-                  <span className="status-pill">{report.status}</span>
-                </p>
-                <button className="secondary-btn" onClick={() => setSelectedReport(report)}>
-                  View
-                </button>
-              </div>
-            ))}
-
-            {!isLoading && !reports.length && (
-              <div className="report-row">
-                <p>No reports</p>
-                <p>-</p>
-                <p>-</p>
-                <p><span className="status-pill">Empty</span></p>
-                <p>-</p>
-              </div>
-            )}
+        <section className="history-table">
+          <div className="report-row report-head">
+            <p>Report ID</p>
+            <p>Image</p>
+            <p>Sign</p>
+            <p>Status</p>
+            <p>Action</p>
           </div>
 
-          <aside className="report-detail">
-            <span className="eyebrow">Selected report</span>
-            {selectedReport ? (
-              <>
-                <h2>{selectedReport.id}</h2>
-                <p><strong>Image:</strong> {selectedReport.fileName}</p>
-                <p><strong>Detected sign:</strong> {selectedReport.sign}</p>
-                <p><strong>Category:</strong> {selectedReport.category}</p>
-                <p><strong>Confidence:</strong> {selectedReport.confidence}%</p>
-                <p><strong>Date:</strong> {selectedReport.createdAt}</p>
-                <button className="primary-btn full-width" onClick={() => downloadReport(selectedReport)}>
-                  Download Report
-                </button>
-              </>
-            ) : (
-              <p>No report selected.</p>
-            )}
-          </aside>
+          {isLoading && (
+            <div className="report-row">
+              <p>Loading</p>
+              <p>Backend reports</p>
+              <p>Please wait</p>
+              <p><span className="status-pill">Loading</span></p>
+              <p>-</p>
+            </div>
+          )}
+
+          {!isLoading && reports.map((report) => (
+            <div className="report-row" key={report.id}>
+              <p>{report.id}</p>
+              <p>{report.fileName}</p>
+              <p>{report.sign}</p>
+              <p>
+                <span className={statusPillClass(report.status)}>{report.status}</span>
+              </p>
+              <button className="secondary-btn" onClick={() => setSelectedReport(report)}>
+                View
+              </button>
+            </div>
+          ))}
+
+          {!isLoading && !reports.length && (
+            <div className="report-row">
+              <p>No reports</p>
+              <p>-</p>
+              <p>-</p>
+              <p><span className="status-pill">Empty</span></p>
+              <p>-</p>
+            </div>
+          )}
         </section>
+
+        {selectedReport && (
+          <div className="report-modal-overlay" onClick={() => setSelectedReport(null)}>
+            <div className="report-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="report-modal-header">
+                <span className="eyebrow">Report detail</span>
+                <button className="report-modal-close" onClick={() => setSelectedReport(null)}>✕</button>
+              </div>
+              <h2>{selectedReport.id}</h2>
+              <p><strong>Image:</strong> {selectedReport.fileName}</p>
+              <p><strong>Detected sign:</strong> {selectedReport.sign}</p>
+              <p><strong>Category:</strong> {selectedReport.category}</p>
+              <p><strong>Confidence:</strong> {selectedReport.confidence}%</p>
+              <p><strong>Status:</strong> <span className={statusPillClass(selectedReport.status)}>{selectedReport.status}</span></p>
+              <p><strong>Date:</strong> {selectedReport.createdAt}</p>
+              <button className="primary-btn" style={{ width: "100%", marginTop: "16px" }} onClick={() => downloadReport(selectedReport)}>
+                Download Report
+              </button>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

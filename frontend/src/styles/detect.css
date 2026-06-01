@@ -1,3 +1,31 @@
+.rate-limit-banner {
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rate-limit-banner strong {
+  color: #991b1b;
+  font-size: 14px;
+}
+
+.rate-limit-banner p {
+  color: #b91c1c;
+  font-size: 13px;
+  margin: 0;
+}
+
+.rate-limit-banner .primary-btn {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 6px 16px;
+  font-size: 13px;
+}
+
 .detect-header {
   align-items: center;
   display: flex;

@@ -1,5 +1,8 @@
 const { query } = require("../db/client");
+const { getClient: getRedis } = require("../db/redis");
 const { findUserByEmail } = require("./userService");
+
+const BASIC_PLAN_LIMIT = 3;
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
@@ -216,7 +219,94 @@ async function addDetection(email, data) {
   return detection;
 }
 
+function monthRateKey(userId) {
+  const now = new Date();
+  const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  return `detect:count:${userId}:${month}`;
+}
+
+async function getUserPlan(userId) {
+  const result = await query(
+    `SELECT plan_name FROM subscriptions
+     WHERE user_id = $1 AND is_active = true
+     ORDER BY start_date DESC LIMIT 1`,
+    [userId]
+  );
+  return (result.rows[0]?.plan_name || "Basic").toLowerCase();
+}
+
+async function checkRateLimit(userId) {
+  try {
+    const redis = getRedis();
+    if (!redis) return { allowed: true, used: 0, limit: BASIC_PLAN_LIMIT };
+    const count = Number((await redis.get(monthRateKey(userId))) || 0);
+    return { allowed: count < BASIC_PLAN_LIMIT, used: count, limit: BASIC_PLAN_LIMIT };
+  } catch {
+    return { allowed: true, used: 0, limit: BASIC_PLAN_LIMIT };
+  }
+}
+
+async function incrementRateLimit(userId) {
+  try {
+    const redis = getRedis();
+    if (!redis) return;
+    const key = monthRateKey(userId);
+    const count = await redis.incr(key);
+    if (count === 1) {
+      const now = new Date();
+      const daysLeft = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - now.getDate() + 1;
+      await redis.expire(key, daysLeft * 86400);
+    }
+  } catch {
+    // Redis unavailable — skip silently
+  }
+}
+
 async function detectSign(email, file) {
+  const user = await findUserByEmail(email);
+  const plan = await getUserPlan(user.id);
+
+  if (plan === "basic") {
+    const { allowed, used, limit } = await checkRateLimit(user.id);
+    if (!allowed) {
+      const rateLimitMessage = `Basic plan allows ${limit} detections per month. You have used all ${used}. Upgrade to Premium or Team for unlimited detections.`;
+
+      const rejectedDetection = await addDetection(email, {
+        fileName: file?.fileName || "unknown-file",
+        fileSize: file?.fileSize || 0,
+        fileType: file?.fileType || "",
+        sign: "Not detected",
+        category: "Unknown",
+        confidence: 0,
+        status: "Rejected",
+        box: "",
+      });
+
+      const { createNotificationForEmail, notifyRoles } = require("./notificationService");
+
+      await createNotificationForEmail(
+        email,
+        "detection-rejected",
+        "Detection limit reached",
+        `Your detection was rejected. ${rateLimitMessage}`
+      );
+      await notifyRoles(
+        ["Administrator", "Manager"],
+        "detection-rejected",
+        "Detection limit reached",
+        `${email} has reached the Basic plan limit of ${limit} detections this month.`
+      );
+
+      return {
+        ok: false,
+        message: rateLimitMessage,
+        rateLimited: true,
+        workflow: ["Created", "Uploaded", "Validating", "Rejected"],
+        detection: rejectedDetection,
+      };
+    }
+  }
+
   const validationMessage = validateImage(file);
 
   if (validationMessage) {
@@ -261,6 +351,10 @@ async function detectSign(email, file) {
     ...prediction,
     status: "Completed",
   });
+
+  if (plan === "basic") {
+    await incrementRateLimit(user.id);
+  }
   const { createNotificationForEmail, notifyRoles } = require("./notificationService");
 
   await createNotificationForEmail(

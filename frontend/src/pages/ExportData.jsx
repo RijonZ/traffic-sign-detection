@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Navbar from "../shared/Navbar";
+import { statusPillClass } from "../utils/statusUtils";
 import "../styles/auth.css";
 import "../styles/dashboard.css";
 import "../styles/history.css";
@@ -165,7 +166,7 @@ function ExportData({ currentUser, onLogout, onNavigate }) {
                 <p>{item.id}</p>
                 <p>{item.fileName}</p>
                 <p>{item.sign}</p>
-                <p><span className="status-pill">{item.status}</span></p>
+                <p><span className={statusPillClass(item.status)}>{item.status}</span></p>
                 <p>{item.confidence}%</p>
               </div>
             ))}

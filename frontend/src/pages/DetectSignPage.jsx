@@ -40,6 +40,7 @@ function DetectSignPage({ currentUser, onLogout, onNavigate }) {
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState("");
   const [error, setError] = useState("");
+  const [isRateLimited, setIsRateLimited] = useState(false);
   const [status, setStatus] = useState("Ready");
   const [steps, setSteps] = useState(initialSteps);
   const [result, setResult] = useState(null);
@@ -103,6 +104,7 @@ function DetectSignPage({ currentUser, onLogout, onNavigate }) {
     clearTimers();
     setFile(selectedFile || null);
     setError(validationMessage);
+    setIsRateLimited(false);
     setResult(null);
     setSteps(initialSteps);
     setStatus(selectedFile ? "Created" : "Ready");
@@ -136,7 +138,9 @@ function DetectSignPage({ currentUser, onLogout, onNavigate }) {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.message || "Detection request failed.");
+      const err = new Error(data.message || "Detection request failed.");
+      err.rateLimited = data.rateLimited || false;
+      throw err;
     }
 
     return data.detection;
@@ -163,7 +167,7 @@ function DetectSignPage({ currentUser, onLogout, onNavigate }) {
     };
   }
 
-  function runDetection() {
+  async function runDetection() {
     const validationMessage = validateFile(file);
 
     if (validationMessage) {
@@ -177,20 +181,30 @@ function DetectSignPage({ currentUser, onLogout, onNavigate }) {
     setError("");
     setResult(null);
     setSteps(initialSteps);
+    setStatus("Processing");
+
+    let detectionResult;
+    try {
+      const backendDetection = await requestBackendDetection();
+      detectionResult = formatBackendDetection(backendDetection);
+    } catch (requestError) {
+      if (requestError.rateLimited) {
+        setError(requestError.message);
+        setIsRateLimited(true);
+        setStatus("Rejected");
+        return;
+      }
+      detectionResult = buildLocalDetection();
+    }
 
     ["Created", "Uploaded", "Validating", "Processing", "Predicted", "Saved", "Notified", "Completed"].forEach(
       (stepStatus, index) => updateStep(index, stepStatus)
     );
 
     timers.current.push(
-      setTimeout(async () => {
-        try {
-          const backendDetection = await requestBackendDetection();
-          saveDetectionResult(formatBackendDetection(backendDetection));
-        } catch (requestError) {
-          saveDetectionResult(buildLocalDetection());
-        }
-      }, 3400)
+      setTimeout(() => {
+        saveDetectionResult(detectionResult);
+      }, 8 * 450)
     );
   }
 
@@ -242,22 +256,35 @@ function DetectSignPage({ currentUser, onLogout, onNavigate }) {
         <section className="detect-layout">
           <div className="detect-panel">
             <h3>Upload Image</h3>
-            <label className="upload-box">
-              <input type="file" accept="image/*" onChange={handleFileChange} />
-              <span>{file ? file.name : "Choose traffic sign image"}</span>
-            </label>
 
-            {error && <p className="auth-error">{error}</p>}
-
-            {preview ? (
-              <img className="image-preview" src={preview} alt="Uploaded traffic sign preview" />
+            {isRateLimited ? (
+              <div className="rate-limit-banner">
+                <strong>Detection limit reached</strong>
+                <p>{error}</p>
+                <button className="primary-btn" onClick={() => onNavigate("subscription")}>
+                  Upgrade Plan
+                </button>
+              </div>
             ) : (
-              <div className="empty-preview">Image preview</div>
-            )}
+              <>
+                <label className="upload-box">
+                  <input type="file" accept="image/*" onChange={handleFileChange} />
+                  <span>{file ? file.name : "Choose traffic sign image"}</span>
+                </label>
 
-            <button className="primary-btn full-width" disabled={!canDetect} onClick={runDetection}>
-              Run Detection
-            </button>
+                {error && <p className="auth-error">{error}</p>}
+
+                {preview ? (
+                  <img className="image-preview" src={preview} alt="Uploaded traffic sign preview" />
+                ) : (
+                  <div className="empty-preview">Image preview</div>
+                )}
+
+                <button className="primary-btn full-width" disabled={!canDetect} onClick={runDetection}>
+                  Run Detection
+                </button>
+              </>
+            )}
           </div>
 
           <div className="detect-panel">
