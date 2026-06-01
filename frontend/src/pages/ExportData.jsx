@@ -1,49 +1,17 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Navbar from "../shared/Navbar";
 import "../styles/auth.css";
 import "../styles/dashboard.css";
 import "../styles/history.css";
 import "../styles/reports.css";
 
-const HISTORY_KEY = "traffic-sign-detections";
+const API_BASE_URL = "http://localhost:5000/api";
 
-const sampleDetections = [
-  {
-    id: "DET-1001",
-    fileName: "city-road-stop.jpg",
-    requestedBy: "User",
-    sign: "Stop Sign",
-    category: "Regulatory",
-    confidence: 96,
-    status: "Completed",
-    detectedAt: "2026-05-18 10:24",
-  },
-  {
-    id: "DET-1002",
-    fileName: "school-crossing.png",
-    requestedBy: "Manager",
-    sign: "Pedestrian Crossing",
-    category: "Warning",
-    confidence: 89,
-    status: "Completed",
-    detectedAt: "2026-05-18 12:10",
-  },
-  {
-    id: "DET-1003",
-    fileName: "blurred-night-image.jpg",
-    requestedBy: "User",
-    sign: "Not detected",
-    category: "Unknown",
-    confidence: 0,
-    status: "Rejected",
-    detectedAt: "2026-05-19 14:42",
-  },
-];
-
-function readDetections() {
-  const savedDetections = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
-  return savedDetections.length ? savedDetections : sampleDetections;
-}
+const emptySummary = {
+  totalRecords: 0,
+  completed: 0,
+  rejected: 0,
+};
 
 function downloadFile(fileName, content, type) {
   const fileUrl = URL.createObjectURL(new Blob([content], { type }));
@@ -64,11 +32,43 @@ function toCsv(items) {
 }
 
 function ExportData({ currentUser, onLogout, onNavigate }) {
-  const detections = useMemo(readDetections, []);
+  const [detections, setDetections] = useState([]);
+  const [summary, setSummary] = useState(emptySummary);
   const [format, setFormat] = useState("csv");
-  const completed = detections.filter((item) => item.status !== "Rejected").length;
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  useEffect(() => {
+    if (!currentUser || currentUser.role !== "Manager") {
+      return;
+    }
+
+    setLoading(true);
+    setErrorMessage("");
+
+    fetch(
+      `${API_BASE_URL}/manager/export-data?managerEmail=${encodeURIComponent(
+        currentUser.email
+      )}`
+    )
+      .then((response) => (response.ok ? response.json() : Promise.reject()))
+      .then((data) => {
+        setDetections(data.records || []);
+        setSummary(data.summary || emptySummary);
+      })
+      .catch(() => {
+        setDetections([]);
+        setSummary(emptySummary);
+        setErrorMessage("Could not load export data from the backend.");
+      })
+      .finally(() => setLoading(false));
+  }, [currentUser]);
 
   function exportData() {
+    if (!detections.length) {
+      return;
+    }
+
     if (format === "json") {
       downloadFile("traffic-sign-detections.json", JSON.stringify(detections, null, 2), "application/json");
       return;
@@ -130,17 +130,19 @@ function ExportData({ currentUser, onLogout, onNavigate }) {
         <section className="history-summary">
           <div className="dashboard-card">
             <h3>Total Records</h3>
-            <p>{detections.length}</p>
+            <p>{loading ? "..." : summary.totalRecords}</p>
           </div>
           <div className="dashboard-card">
             <h3>Completed</h3>
-            <p>{completed}</p>
+            <p>{loading ? "..." : summary.completed}</p>
           </div>
           <div className="dashboard-card">
             <h3>Rejected</h3>
-            <p>{detections.length - completed}</p>
+            <p>{loading ? "..." : summary.rejected}</p>
           </div>
         </section>
+
+        {errorMessage && <p className="auth-error">{errorMessage}</p>}
 
         <section className="reports-layout">
           <div className="history-table">
@@ -151,6 +153,12 @@ function ExportData({ currentUser, onLogout, onNavigate }) {
               <p>Status</p>
               <p>Confidence</p>
             </div>
+
+            {!loading && detections.length === 0 && (
+              <p style={{ padding: "24px 16px", color: "var(--muted, #888)" }}>
+                No export records are available yet.
+              </p>
+            )}
 
             {detections.map((item) => (
               <div className="report-row" key={item.id}>
@@ -174,8 +182,8 @@ function ExportData({ currentUser, onLogout, onNavigate }) {
               <option value="json">JSON</option>
             </select>
 
-            <button className="primary-btn full-width" onClick={exportData}>
-              Export Data
+            <button className="primary-btn full-width" onClick={exportData} disabled={!detections.length}>
+              {detections.length ? "Export Data" : "No Data to Export"}
             </button>
           </aside>
         </section>

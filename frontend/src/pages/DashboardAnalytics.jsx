@@ -1,39 +1,53 @@
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 import Navbar from "../shared/Navbar";
 import "../styles/analytics.css";
 import "../styles/auth.css";
 import "../styles/dashboard.css";
 
-const HISTORY_KEY = "traffic-sign-detections";
+const API_BASE_URL = "http://localhost:5000/api";
 
-const sampleDetections = [
-  { id: 1, sign: "Stop Sign", category: "Regulatory", confidence: 96, status: "Completed" },
-  { id: 2, sign: "Speed Limit", category: "Regulatory", confidence: 91, status: "Completed" },
-  { id: 3, sign: "Pedestrian Crossing", category: "Warning", confidence: 89, status: "Completed" },
-  { id: 4, sign: "No Entry", category: "Prohibition", confidence: 94, status: "Completed" },
-  { id: 5, sign: "Not detected", category: "Unknown", confidence: 0, status: "Rejected" },
-];
-
-function readDetections() {
-  const savedDetections = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
-  return savedDetections.length ? savedDetections : sampleDetections;
-}
-
-function countByCategory(detections) {
-  return detections.reduce((groups, detection) => {
-    const category = detection.category || "Unknown";
-    return { ...groups, [category]: (groups[category] || 0) + 1 };
-  }, {});
-}
+const emptyAnalytics = {
+  metrics: {
+    totalDetections: 0,
+    averageConfidence: 0,
+    rejectedUploads: 0,
+    completed: 0,
+    modelStatus: "Active",
+    reviewNeeded: false,
+  },
+  categoryCounts: {},
+  insight: "No detections are available yet. Upload traffic sign images to populate analytics.",
+};
 
 function DashboardAnalytics({ currentUser, onLogout, onNavigate }) {
-  const detections = useMemo(readDetections, []);
-  const categoryCounts = countByCategory(detections);
-  const completed = detections.filter((item) => item.status !== "Rejected").length;
-  const rejected = detections.length - completed;
-  const averageConfidence = Math.round(
-    detections.reduce((total, item) => total + Number(item.confidence || 0), 0) / detections.length
-  );
+  const [analytics, setAnalytics] = useState(emptyAnalytics);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  useEffect(() => {
+    if (!currentUser || currentUser.role !== "Manager") {
+      return;
+    }
+
+    setLoading(true);
+    setErrorMessage("");
+
+    fetch(
+      `${API_BASE_URL}/manager/dashboard-analytics?managerEmail=${encodeURIComponent(
+        currentUser.email
+      )}`
+    )
+      .then((response) => (response.ok ? response.json() : Promise.reject()))
+      .then((data) => setAnalytics(data))
+      .catch(() => {
+        setAnalytics(emptyAnalytics);
+        setErrorMessage("Could not load analytics from the backend.");
+      })
+      .finally(() => setLoading(false));
+  }, [currentUser]);
+
+  const { metrics, categoryCounts, insight } = analytics;
+  const totalDetections = metrics.totalDetections || 0;
 
   if (!currentUser) {
     return (
@@ -91,17 +105,19 @@ function DashboardAnalytics({ currentUser, onLogout, onNavigate }) {
         <section className="dashboard-grid">
           <div className="dashboard-card">
             <h3>Total Detections</h3>
-            <p className="metric-value">{detections.length}</p>
+            <p className="metric-value">{loading ? "..." : totalDetections}</p>
           </div>
           <div className="dashboard-card">
             <h3>Average Confidence</h3>
-            <p className="metric-value">{averageConfidence}%</p>
+            <p className="metric-value">{loading ? "..." : `${metrics.averageConfidence || 0}%`}</p>
           </div>
           <div className="dashboard-card">
             <h3>Rejected Uploads</h3>
-            <p className="metric-value">{rejected}</p>
+            <p className="metric-value">{loading ? "..." : metrics.rejectedUploads || 0}</p>
           </div>
         </section>
+
+        {errorMessage && <p className="auth-error">{errorMessage}</p>}
 
         <section className="analytics-layout">
           <div className="analytics-panel">
@@ -109,6 +125,10 @@ function DashboardAnalytics({ currentUser, onLogout, onNavigate }) {
               <span className="eyebrow">Detection categories</span>
               <h2>Signs detected by type</h2>
             </div>
+
+            {!Object.keys(categoryCounts).length && (
+              <p className="analytics-empty">No category data available yet.</p>
+            )}
 
             {Object.entries(categoryCounts).map(([category, count]) => (
               <div className="bar-row" key={category}>
@@ -119,7 +139,7 @@ function DashboardAnalytics({ currentUser, onLogout, onNavigate }) {
                 <div className="bar-track">
                   <div
                     className="bar-fill"
-                    style={{ width: `${Math.max((count / detections.length) * 100, 8)}%` }}
+                    style={{ width: `${Math.max((count / totalDetections) * 100, 8)}%` }}
                   />
                 </div>
               </div>
@@ -133,10 +153,10 @@ function DashboardAnalytics({ currentUser, onLogout, onNavigate }) {
             </div>
 
             <div className="summary-list">
-              <p><strong>Completed:</strong> {completed}</p>
-              <p><strong>Rejected:</strong> {rejected}</p>
-              <p><strong>Model status:</strong> Active</p>
-              <p><strong>Review needed:</strong> {averageConfidence < 85 ? "Yes" : "No"}</p>
+              <p><strong>Completed:</strong> {metrics.completed || 0}</p>
+              <p><strong>Rejected:</strong> {metrics.rejectedUploads || 0}</p>
+              <p><strong>Model status:</strong> {metrics.modelStatus || "Active"}</p>
+              <p><strong>Review needed:</strong> {metrics.reviewNeeded ? "Yes" : "No"}</p>
             </div>
           </div>
         </section>
@@ -144,10 +164,7 @@ function DashboardAnalytics({ currentUser, onLogout, onNavigate }) {
         <section className="activity-panel">
           <div>
             <h3>Recent Manager Insight</h3>
-            <p>
-              Regulatory signs are the most common category, while rejected uploads should be
-              reviewed when image quality is low.
-            </p>
+            <p>{insight}</p>
           </div>
           <button className="primary-btn" onClick={() => onNavigate("all-detections")}>
             View All Detections

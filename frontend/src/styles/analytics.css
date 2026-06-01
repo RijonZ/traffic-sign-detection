@@ -35,6 +35,11 @@
   color: #4b5563;
 }
 
+.analytics-empty {
+  color: #6b7280;
+  margin: 0;
+}
+
 .bar-track {
   background-color: #eef2f7;
   border-radius: 999px;
