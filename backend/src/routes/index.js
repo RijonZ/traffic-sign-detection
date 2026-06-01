@@ -30,8 +30,11 @@ const {
 const { getHome } = require("../controllers/homeController");
 const { updateUserProfile } = require("../controllers/userController");
 const {
+  activateBasicPlan,
+  activateDemoPlan,
   confirmStripeCheckoutSession,
   createStripeCheckoutSession,
+  getSubscription,
 } = require("../controllers/paymentController");
 const { sendJson, sendOptions, notFound } = require("../utils/http");
 
@@ -42,6 +45,9 @@ const routes = [
   { method: "POST", path: /^\/api\/auth\/signup$/, handler: signup },
   { method: "POST", path: /^\/api\/auth\/logout$/, handler: logout },
   { method: "POST", path: /^\/api\/chat$/, handler: sendMessage },
+  { method: "GET", path: /^\/api\/payments\/subscription$/, handler: getSubscription },
+  { method: "POST", path: /^\/api\/payments\/basic-plan$/, handler: activateBasicPlan },
+  { method: "POST", path: /^\/api\/payments\/demo-plan$/, handler: activateDemoPlan },
   { method: "POST", path: /^\/api\/payments\/create-checkout-session$/, handler: createStripeCheckoutSession },
   { method: "POST", path: /^\/api\/payments\/confirm-checkout-session$/, handler: confirmStripeCheckoutSession },
   { method: "GET", path: /^\/api\/detect-sign$/, handler: getDetectionHistory },

@@ -1,5 +1,78 @@
-const { confirmCheckoutSession, createCheckoutSession } = require("../services/paymentService");
+const {
+  activateBasicSubscription,
+  activateDemoSubscription,
+  confirmCheckoutSession,
+  createCheckoutSession,
+  getCurrentSubscription,
+} = require("../services/paymentService");
 const { readBody, sendJson } = require("../utils/http");
+
+function getEmailFromQuery(request) {
+  const url = new URL(request.url, `http://${request.headers.host}`);
+  return url.searchParams.get("email") || "";
+}
+
+async function getSubscription(request, response) {
+  const email = getEmailFromQuery(request);
+
+  if (!email) {
+    sendJson(response, 400, { message: "Email is required." });
+    return;
+  }
+
+  const result = await getCurrentSubscription(email);
+
+  if (!result.ok) {
+    sendJson(response, result.statusCode, { message: result.message });
+    return;
+  }
+
+  sendJson(response, 200, { payment: result.payment });
+}
+
+async function activateBasicPlan(request, response) {
+  try {
+    const { email } = await readBody(request);
+
+    if (!email) {
+      sendJson(response, 400, { message: "Email is required." });
+      return;
+    }
+
+    const result = await activateBasicSubscription(email);
+
+    if (!result.ok) {
+      sendJson(response, result.statusCode, { message: result.message });
+      return;
+    }
+
+    sendJson(response, 200, { payment: result.payment });
+  } catch (error) {
+    sendJson(response, 400, { message: "Invalid request body." });
+  }
+}
+
+async function activateDemoPlan(request, response) {
+  try {
+    const { email, planId } = await readBody(request);
+
+    if (!email || !planId) {
+      sendJson(response, 400, { message: "Email and plan are required." });
+      return;
+    }
+
+    const result = await activateDemoSubscription(email, planId);
+
+    if (!result.ok) {
+      sendJson(response, result.statusCode, { message: result.message });
+      return;
+    }
+
+    sendJson(response, 200, { payment: result.payment });
+  } catch (error) {
+    sendJson(response, 400, { message: "Invalid request body." });
+  }
+}
 
 async function createStripeCheckoutSession(request, response) {
   try {
@@ -53,4 +126,10 @@ async function confirmStripeCheckoutSession(request, response) {
   }
 }
 
-module.exports = { confirmStripeCheckoutSession, createStripeCheckoutSession };
+module.exports = {
+  activateBasicPlan,
+  activateDemoPlan,
+  confirmStripeCheckoutSession,
+  createStripeCheckoutSession,
+  getSubscription,
+};

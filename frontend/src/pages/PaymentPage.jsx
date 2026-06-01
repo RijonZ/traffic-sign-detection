@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Navbar from "../shared/Navbar";
 import "../styles/auth.css";
 import "../styles/dashboard.css";
 import "../styles/payment.css";
 
-const PAYMENT_KEY = "traffic-sign-payments";
+const API_BASE_URL = "http://localhost:5000/api";
 
 const plans = [
   {
@@ -30,21 +30,6 @@ const plans = [
   },
 ];
 
-function readPayments() {
-  return JSON.parse(localStorage.getItem(PAYMENT_KEY) || "{}");
-}
-
-function savePayment(email, payment) {
-  const savedPayments = readPayments();
-  localStorage.setItem(PAYMENT_KEY, JSON.stringify({ ...savedPayments, [email]: payment }));
-}
-
-function getNextMonthDate() {
-  const date = new Date();
-  date.setMonth(date.getMonth() + 1);
-  return date.toLocaleString();
-}
-
 function getExpiryDate(payment) {
   if (!payment) {
     return "";
@@ -60,15 +45,41 @@ function getExpiryDate(payment) {
 }
 
 function PaymentPage({ currentUser, onLogout, onNavigate }) {
-  const initialPayment = useMemo(() => {
-    return currentUser ? readPayments()[currentUser.email] : null;
-  }, [currentUser]);
-  const [savedPayment, setSavedPayment] = useState(initialPayment);
-  const [selectedPlan, setSelectedPlan] = useState(initialPayment?.planId || "premium");
+  const [savedPayment, setSavedPayment] = useState(null);
+  const [selectedPlan, setSelectedPlan] = useState("premium");
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("success");
-  const [redirectingPlan, setRedirectingPlan] = useState("");
+  const [activatingPlan, setActivatingPlan] = useState("");
   const [checkoutChecked, setCheckoutChecked] = useState(false);
+
+  useEffect(() => {
+    async function loadSubscription() {
+      if (!currentUser) {
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/payments/subscription?email=${encodeURIComponent(currentUser.email)}`
+        );
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || "Subscription could not be loaded.");
+        }
+
+        if (data.payment) {
+          setSavedPayment(data.payment);
+          setSelectedPlan(data.payment.planId);
+        }
+      } catch (error) {
+        setMessage(error.message);
+        setMessageType("error");
+      }
+    }
+
+    loadSubscription();
+  }, [currentUser]);
 
   useEffect(() => {
     async function confirmStripeReturn() {
@@ -85,7 +96,7 @@ function PaymentPage({ currentUser, onLogout, onNavigate }) {
       setMessageType("success");
 
       try {
-        const response = await fetch("http://localhost:5000/api/payments/confirm-checkout-session", {
+        const response = await fetch(`${API_BASE_URL}/payments/confirm-checkout-session`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: currentUser.email, sessionId }),
@@ -96,15 +107,9 @@ function PaymentPage({ currentUser, onLogout, onNavigate }) {
           throw new Error(data.message || "Stripe payment could not be confirmed.");
         }
 
-        const payment = {
-          ...data.payment,
-          expiresAt: getNextMonthDate(),
-        };
-
-        savePayment(currentUser.email, payment);
-        setSavedPayment(payment);
-        setSelectedPlan(payment.planId);
-        setMessage(`${payment.planName} plan is now paid.`);
+        setSavedPayment(data.payment);
+        setSelectedPlan(data.payment.planId);
+        setMessage(`${data.payment.planName} plan is now paid.`);
         window.history.replaceState(null, "", "#/subscription");
       } catch (error) {
         setMessage(error.message);
@@ -121,25 +126,10 @@ function PaymentPage({ currentUser, onLogout, onNavigate }) {
     setMessage("");
     setMessageType("success");
 
-    if (nextPlan.id === "basic") {
-      const payment = {
-        planId: nextPlan.id,
-        planName: nextPlan.name,
-        price: nextPlan.price,
-        status: "Active",
-      };
-
-      savePayment(currentUser.email, payment);
-      setSavedPayment(payment);
-      setMessage("Basic plan is now active.");
-      setMessageType("success");
-      return;
-    }
-
     try {
-      setRedirectingPlan(planId);
+      setActivatingPlan(planId);
 
-      const response = await fetch("http://localhost:5000/api/payments/create-checkout-session", {
+      const response = await fetch(`${API_BASE_URL}/payments/demo-plan`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: currentUser.email, planId }),
@@ -147,14 +137,17 @@ function PaymentPage({ currentUser, onLogout, onNavigate }) {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Stripe checkout could not be created.");
+        throw new Error(data.message || "Plan could not be activated.");
       }
 
-      window.location.href = data.url;
+      setSavedPayment(data.payment);
+      setMessage(`${data.payment.planName} plan is now active for demo.`);
+      setMessageType("success");
     } catch (error) {
       setMessage(error.message);
       setMessageType("error");
-      setRedirectingPlan("");
+    } finally {
+      setActivatingPlan("");
     }
   }
 
@@ -186,7 +179,7 @@ function PaymentPage({ currentUser, onLogout, onNavigate }) {
             <h1>Subscription Plans</h1>
             <p>
               Choose a plan for detections, reports, exports, and analytics.
-              Paid plans redirect to Stripe Checkout so the payment is completed securely outside the app.
+              Paid plans are activated as demo payments and saved in the backend database.
             </p>
           </div>
           <button className="secondary-btn" onClick={() => onNavigate("home")}>
@@ -207,9 +200,9 @@ function PaymentPage({ currentUser, onLogout, onNavigate }) {
               <button
                 className={item.id === "basic" ? "secondary-btn full-width" : "primary-btn full-width"}
                 onClick={() => choosePlan(item.id)}
-                disabled={Boolean(redirectingPlan)}
+                disabled={Boolean(activatingPlan)}
               >
-                {redirectingPlan === item.id ? "Redirecting to Stripe..." : item.id === "basic" ? "Use Basic Plan" : `Choose ${item.name}`}
+                {activatingPlan === item.id ? "Activating..." : item.id === "basic" ? "Use Basic Plan" : `Choose ${item.name}`}
               </button>
             </div>
           ))}
