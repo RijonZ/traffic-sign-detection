@@ -11,6 +11,7 @@ function formatUser(user) {
     status: user.is_active ? "Active" : "Inactive",
     sessionStatus: user.is_online ? "Online" : "Offline",
     lastLoginAt: user.last_login_at || null,
+    subscriptionPlan: user.subscription_plan || null,
   };
 }
 
@@ -69,7 +70,14 @@ async function getAllUsers() {
           SELECT max(rt.created_at)
           FROM refresh_tokens rt
           WHERE rt.user_id = u.id
-        ) AS last_login_at
+        ) AS last_login_at,
+        (
+          SELECT s.plan_name
+          FROM subscriptions s
+          WHERE s.user_id = u.id AND s.is_active = true
+          ORDER BY s.start_date DESC
+          LIMIT 1
+        ) AS subscription_plan
       FROM users u
       LEFT JOIN user_roles ur ON ur.user_id = u.id
       LEFT JOIN roles r ON r.id = ur.role_id

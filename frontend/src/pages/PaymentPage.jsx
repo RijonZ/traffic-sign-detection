@@ -60,7 +60,7 @@ function PaymentPage({ currentUser, onLogout, onNavigate }) {
 
       try {
         const response = await fetch(
-          `${API_BASE_URL}/payments/subscription?email=${encodeURIComponent(currentUser.email)}`
+          `${API_BASE_URL}/users/${encodeURIComponent(currentUser.email)}/subscription`
         );
         const data = await response.json();
 
@@ -120,29 +120,66 @@ function PaymentPage({ currentUser, onLogout, onNavigate }) {
     confirmStripeReturn();
   }, [checkoutChecked, currentUser]);
 
-  async function choosePlan(planId) {
-    const nextPlan = plans.find((item) => item.id === planId);
-    setSelectedPlan(planId);
+  async function cancelPlan() {
+    if (!window.confirm("Are you sure you want to cancel your subscription?")) return;
+
     setMessage("");
-    setMessageType("success");
-
     try {
-      setActivatingPlan(planId);
-
-      const response = await fetch(`${API_BASE_URL}/payments/demo-plan`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: currentUser.email, planId }),
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/users/${encodeURIComponent(currentUser.email)}/subscription`,
+        { method: "DELETE" }
+      );
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Plan could not be activated.");
+        throw new Error(data.message || "Cancellation failed.");
       }
 
-      setSavedPayment(data.payment);
-      setMessage(`${data.payment.planName} plan is now active for demo.`);
+      setSavedPayment(null);
+      setSelectedPlan("basic");
+      setMessage("Subscription cancelled successfully.");
       setMessageType("success");
+    } catch (error) {
+      setMessage(error.message);
+      setMessageType("error");
+    }
+  }
+
+  async function choosePlan(planId) {
+    setSelectedPlan(planId);
+    setMessage("");
+    setMessageType("success");
+    setActivatingPlan(planId);
+
+    try {
+      if (planId === "basic") {
+        const response = await fetch(`${API_BASE_URL}/payments/basic-plan`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: currentUser.email }),
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || "Plan could not be activated.");
+        }
+
+        setSavedPayment(data.payment);
+        setMessage("Basic plan is now active.");
+      } else {
+        const response = await fetch(`${API_BASE_URL}/payments/create-checkout-session`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: currentUser.email, planId }),
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || "Stripe checkout could not be created.");
+        }
+
+        window.location.href = data.url;
+      }
     } catch (error) {
       setMessage(error.message);
       setMessageType("error");
@@ -179,7 +216,6 @@ function PaymentPage({ currentUser, onLogout, onNavigate }) {
             <h1>Subscription Plans</h1>
             <p>
               Choose a plan for detections, reports, exports, and analytics.
-              Paid plans are activated as demo payments and saved in the backend database.
             </p>
           </div>
           <button className="secondary-btn" onClick={() => onNavigate("home")}>
@@ -223,6 +259,13 @@ function PaymentPage({ currentUser, onLogout, onNavigate }) {
                     <p><strong>Expires on:</strong> {getExpiryDate(savedPayment)}</p>
                   </>
                 )}
+                <button
+                  className="action-btn action-btn-danger"
+                  style={{ marginTop: "12px" }}
+                  onClick={cancelPlan}
+                >
+                  Cancel Subscription
+                </button>
               </div>
             ) : (
               <p>No plan has been selected yet.</p>

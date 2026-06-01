@@ -309,6 +309,10 @@ function App() {
   }
 
   if (page === "subscription" || page === "payment") {
+    if (currentUser?.role === "Manager" || currentUser?.role === "Administrator") {
+      navigate("home");
+      return null;
+    }
     return (
       <PaymentPage
         currentUser={currentUser}

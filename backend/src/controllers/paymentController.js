@@ -1,6 +1,7 @@
 const {
   activateBasicSubscription,
   activateDemoSubscription,
+  cancelSubscription,
   confirmCheckoutSession,
   createCheckoutSession,
   getCurrentSubscription,
@@ -126,10 +127,36 @@ async function confirmStripeCheckoutSession(request, response) {
   }
 }
 
+async function getUserSubscription(_, response, params) {
+  const email = decodeURIComponent(params[0]);
+  const result = await getCurrentSubscription(email);
+
+  if (!result.ok) {
+    sendJson(response, result.statusCode, { message: result.message });
+    return;
+  }
+
+  sendJson(response, 200, { payment: result.payment });
+}
+
+async function cancelUserSubscription(_, response, params) {
+  const email = decodeURIComponent(params[0]);
+  const result = await cancelSubscription(email);
+
+  if (!result.ok) {
+    sendJson(response, result.statusCode, { message: result.message });
+    return;
+  }
+
+  sendJson(response, 200, { ok: true });
+}
+
 module.exports = {
   activateBasicPlan,
   activateDemoPlan,
+  cancelUserSubscription,
   confirmStripeCheckoutSession,
   createStripeCheckoutSession,
+  getUserSubscription,
   getSubscription,
 };

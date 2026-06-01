@@ -121,6 +121,7 @@ function UsersPage({ currentUser, onLogout, onNavigate }) {
   const admins = users.filter((user) => user.role === "Administrator").length;
   const managers = users.filter((user) => user.role === "Manager").length;
   const regularUsers = users.filter((user) => user.role === "User").length;
+  const paidPlans = users.filter((u) => u.role === "User" && u.subscriptionPlan && u.subscriptionPlan.toLowerCase() !== "basic").length;
 
   if (!currentUser) {
     return (
@@ -191,6 +192,10 @@ function UsersPage({ currentUser, onLogout, onNavigate }) {
             <h3>Users</h3>
             <p className="metric-value">{regularUsers}</p>
           </div>
+          <div className="dashboard-card">
+            <h3>Paid Plans</h3>
+            <p className="metric-value">{paidPlans}</p>
+          </div>
         </section>
 
         {actionError && (
@@ -203,6 +208,7 @@ function UsersPage({ currentUser, onLogout, onNavigate }) {
             <p>Name</p>
             <p>Email</p>
             <p>Role</p>
+            <p className="subscription-cell">Subscription</p>
             <p>Status</p>
             <p>Actions</p>
           </div>
@@ -211,6 +217,7 @@ function UsersPage({ currentUser, onLogout, onNavigate }) {
             const isSelf = user.email === currentUser.email;
             const isBeingSaved = saving === user.id;
             const isActive = user.status !== "Inactive";
+            const plan = (user.role === "Administrator" || user.role === "Manager") ? null : user.subscriptionPlan;
 
             return (
               <div className="users-row" key={user.email}>
@@ -233,6 +240,15 @@ function UsersPage({ currentUser, onLogout, onNavigate }) {
                     </select>
                   ) : (
                     user.role
+                  )}
+                </p>
+                <p className="subscription-cell">
+                  {user.role === "Administrator" || user.role === "Manager" ? (
+                    <span style={{ color: "#9ca3af" }}>—</span>
+                  ) : (
+                    <span className={`status-pill ${plan ? "status-active" : ""}`}>
+                      {plan || "None"}
+                    </span>
                   )}
                 </p>
                 <p>

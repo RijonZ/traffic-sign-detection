@@ -32,8 +32,10 @@ const { updateUserProfile } = require("../controllers/userController");
 const {
   activateBasicPlan,
   activateDemoPlan,
+  cancelUserSubscription,
   confirmStripeCheckoutSession,
   createStripeCheckoutSession,
+  getUserSubscription,
   getSubscription,
 } = require("../controllers/paymentController");
 const {
@@ -69,6 +71,8 @@ const routes = [
   { method: "GET", path: /^\/api\/manager\/dashboard-analytics$/, handler: getDashboardAnalytics },
   { method: "GET", path: /^\/api\/manager\/export-data$/, handler: getManagerExportData },
   { method: "PUT", path: /^\/api\/users\/([^/]+)\/profile$/, handler: updateUserProfile },
+  { method: "GET", path: /^\/api\/users\/([^/]+)\/subscription$/, handler: getUserSubscription },
+  { method: "DELETE", path: /^\/api\/users\/([^/]+)\/subscription$/, handler: cancelUserSubscription },
   { method: "GET", path: /^\/api\/users\/([^/]+)\/dashboard$/, handler: getDashboard },
   { method: "GET", path: /^\/api\/users\/([^/]+)\/detections$/, handler: getDetections },
   { method: "POST", path: /^\/api\/users\/([^/]+)\/detections$/, handler: createDetection },

@@ -1,5 +1,5 @@
 const Stripe = require("stripe");
-const { query } = require("../db/client");
+const { pool, query } = require("../db/client");
 
 const paidPlans = {
   premium: {
@@ -129,7 +129,10 @@ async function getCurrentSubscription(userEmail) {
         p.currency,
         p.paid_at
       FROM subscriptions s
-      LEFT JOIN payments p ON p.user_id = s.user_id
+      LEFT JOIN payments p
+        ON p.user_id = s.user_id
+        AND p.paid_at >= s.start_date - INTERVAL '1 minute'
+        AND p.paid_at <= s.start_date + INTERVAL '5 minutes'
       WHERE s.user_id = $1 AND s.is_active = true
       ORDER BY s.start_date DESC, p.paid_at DESC
       LIMIT 1
@@ -169,43 +172,47 @@ async function activateDemoSubscription(userEmail, planId) {
     return { ok: false, statusCode: 404, message: "User was not found." };
   }
 
-  await query(
-    "UPDATE subscriptions SET is_active = false, end_date = now() WHERE user_id = $1 AND is_active = true",
-    [user.id],
-  );
-  const paymentResult = await query(
-    `
-      INSERT INTO payments (user_id, amount, currency, provider, status, paid_at)
-      VALUES ($1, $2, $3, $4, $5, now())
-      RETURNING id, paid_at
-    `,
-    [user.id, plan.amount / 100, String(plan.currency || "USD").toUpperCase(), "demo", "paid"],
-  );
-  const subscriptionResult = await query(
-    `
-      INSERT INTO subscriptions (user_id, plan_name, start_date, end_date, is_active)
-      VALUES ($1, $2, now(), now() + INTERVAL '1 month', true)
-      RETURNING plan_name, start_date, end_date, is_active
-    `,
-    [user.id, plan.name],
-  );
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
 
-  await query(
-    `
-      INSERT INTO payment_logs (payment_id, event_type, event_payload)
-      VALUES ($1, $2, $3)
-    `,
-    [
-      paymentResult.rows[0].id,
-      "demo_subscription_activated",
-      JSON.stringify({ userEmail: user.email, planId: plan.id }),
-    ],
-  );
+    await client.query(
+      "UPDATE subscriptions SET is_active = false, end_date = now() WHERE user_id = $1 AND is_active = true",
+      [user.id],
+    );
 
-  return {
-    ok: true,
-    payment: formatPayment(plan, subscriptionResult.rows[0], paymentResult.rows[0]),
-  };
+    const paymentResult = await client.query(
+      `INSERT INTO payments (user_id, amount, currency, provider, status, paid_at)
+       VALUES ($1, $2, $3, $4, $5, now())
+       RETURNING id, paid_at`,
+      [user.id, plan.amount / 100, String(plan.currency || "USD").toUpperCase(), "demo", "paid"],
+    );
+
+    const subscriptionResult = await client.query(
+      `INSERT INTO subscriptions (user_id, plan_name, start_date, end_date, is_active)
+       VALUES ($1, $2, now(), now() + INTERVAL '1 month', true)
+       RETURNING plan_name, start_date, end_date, is_active`,
+      [user.id, plan.name],
+    );
+
+    await client.query(
+      `INSERT INTO payment_logs (payment_id, event_type, event_payload)
+       VALUES ($1, $2, $3)`,
+      [paymentResult.rows[0].id, "demo_subscription_activated", JSON.stringify({ userEmail: user.email, planId: plan.id })],
+    );
+
+    await client.query("COMMIT");
+
+    return {
+      ok: true,
+      payment: formatPayment(plan, subscriptionResult.rows[0], paymentResult.rows[0]),
+    };
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 async function confirmCheckoutSession(sessionId, userEmail) {
@@ -223,47 +230,87 @@ async function confirmCheckoutSession(sessionId, userEmail) {
     return { ok: false, statusCode: 402, message: "Stripe payment is not completed yet." };
   }
 
-  const paymentResult = await query(
-    `
-      INSERT INTO payments (user_id, amount, currency, provider, status, paid_at)
-      VALUES ($1, $2, $3, $4, $5, now())
-      RETURNING id, user_id, amount, currency, paid_at
-    `,
-    [userId, plan.amount / 100, plan.currency.toUpperCase(), "stripe", "paid"],
+  // Idempotency: nëse sesioni është procesuar tashmë, kthe subscriptionin aktual
+  const already = await query(
+    `SELECT pl.payment_id FROM payment_logs pl
+     WHERE pl.event_type = 'stripe_checkout_session_completed'
+     AND pl.event_payload->>'sessionId' = $1
+     LIMIT 1`,
+    [session.id],
   );
-  const payment = paymentResult.rows[0];
-  const paymentId = paymentResult.rows[0].id;
-
-  if (!payment) {
-    return { ok: false, statusCode: 500, message: "Payment record could not be created." };
+  if (already.rows.length) {
+    const current = await getCurrentSubscription(userEmail);
+    return current.ok
+      ? { ok: true, payment: current.payment }
+      : { ok: false, statusCode: 409, message: "This Stripe session was already confirmed." };
   }
 
-  await query(
-    "UPDATE subscriptions SET is_active = false, end_date = now() WHERE user_id = $1 AND is_active = true",
-    [payment.user_id],
-  );
-  const subscriptionResult = await query(
-    `
-      INSERT INTO subscriptions (user_id, plan_name, start_date, end_date, is_active)
-      VALUES ($1, $2, now(), now() + INTERVAL '1 month', true)
-      RETURNING plan_name, start_date, end_date, is_active
-    `,
-    [payment.user_id, plan.name],
-  );
-  await query(
-    `
-      INSERT INTO payment_logs (payment_id, event_type, event_payload)
-      VALUES ($1, $2, $3)
-    `,
-    [paymentId, "stripe_checkout_session_completed", JSON.stringify({ sessionId: session.id, planId: plan.id })],
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const paymentResult = await client.query(
+      `INSERT INTO payments (user_id, amount, currency, provider, status, paid_at)
+       VALUES ($1, $2, $3, $4, $5, now())
+       RETURNING id, user_id, amount, currency, paid_at`,
+      [userId, plan.amount / 100, plan.currency.toUpperCase(), "stripe", "paid"],
+    );
+    const payment = paymentResult.rows[0];
+
+    await client.query(
+      "UPDATE subscriptions SET is_active = false, end_date = now() WHERE user_id = $1 AND is_active = true",
+      [payment.user_id],
+    );
+
+    const subscriptionResult = await client.query(
+      `INSERT INTO subscriptions (user_id, plan_name, start_date, end_date, is_active)
+       VALUES ($1, $2, now(), now() + INTERVAL '1 month', true)
+       RETURNING plan_name, start_date, end_date, is_active`,
+      [payment.user_id, plan.name],
+    );
+
+    await client.query(
+      `INSERT INTO payment_logs (payment_id, event_type, event_payload)
+       VALUES ($1, $2, $3)`,
+      [payment.id, "stripe_checkout_session_completed", JSON.stringify({ sessionId: session.id, planId: plan.id })],
+    );
+
+    await client.query("COMMIT");
+
+    return { ok: true, payment: formatPayment(plan, subscriptionResult.rows[0], payment) };
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+async function cancelSubscription(userEmail) {
+  const user = await getUserByEmail(userEmail);
+
+  if (!user) {
+    return { ok: false, statusCode: 404, message: "User was not found." };
+  }
+
+  const result = await query(
+    `UPDATE subscriptions SET is_active = false, end_date = now()
+     WHERE user_id = $1 AND is_active = true
+     RETURNING id`,
+    [user.id]
   );
 
-  return { ok: true, payment: formatPayment(plan, subscriptionResult.rows[0], payment) };
+  if (!result.rows.length) {
+    return { ok: false, statusCode: 404, message: "No active subscription found." };
+  }
+
+  return { ok: true };
 }
 
 module.exports = {
   activateBasicSubscription,
   activateDemoSubscription,
+  cancelSubscription,
   confirmCheckoutSession,
   createCheckoutSession,
   getCurrentSubscription,

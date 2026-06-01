@@ -27,7 +27,6 @@ const managerLinks = [
   { label: "Reports", page: "reports" },
   { label: "All Detections", page: "all-detections" },
   { label: "Export Data", page: "export-data" },
-  { label: "Subscription", page: "subscription" },
   { label: "My Profile", page: "profile" },
 ];
 
