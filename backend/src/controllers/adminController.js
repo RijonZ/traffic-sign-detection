@@ -2,11 +2,11 @@ const { getAuditLogs } = require("../services/auditLogService");
 const { getAdminDashboard } = require("../services/adminDashboardService");
 const { getAllDetections } = require("../services/detectionService");
 const { getModelMonitoringSummary } = require("../services/modelMonitoringService");
-const { getAllReports } = require("../services/reportService");
+const { getAllReports, getAdminReportPdf } = require("../services/reportService");
 const { findUserByEmail, getAllUsers, getUsersSummaryFromList, updateUser, deleteUser } = require("../services/userService");
 const { getSettings, updateSettings } = require("../services/settingsService");
 const { getAllFeedbacks } = require("../services/feedbackService");
-const { sendJson, readBody } = require("../utils/http");
+const { sendJson, sendPdf, readBody } = require("../utils/http");
 
 async function getAdminUser(request) {
   const url = new URL(request.url, `http://${request.headers.host}`);
@@ -126,6 +126,17 @@ async function getAdminFeedbacks(request, response) {
   sendJson(response, 200, { feedbacks: await getAllFeedbacks() });
 }
 
+async function downloadAdminReport(request, response, params) {
+  if (!(await ensureAdministrator(request, response))) return;
+  const [reportId] = params;
+  const reportPdf = await getAdminReportPdf(reportId);
+  if (!reportPdf) {
+    sendJson(response, 404, { message: "Report not found." });
+    return;
+  }
+  sendPdf(response, reportPdf.fileName, reportPdf.pdf);
+}
+
 module.exports = {
   getAdminAuditLogs,
   getAdminDashboardSummary,
@@ -138,4 +149,5 @@ module.exports = {
   getAdminSettings,
   updateAdminSettings,
   getAdminFeedbacks,
+  downloadAdminReport,
 };

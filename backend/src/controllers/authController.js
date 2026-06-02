@@ -1,4 +1,4 @@
-const { createUserAccount, revokeLoginSession, validateLogin } = require("../services/userService");
+const { createUserAccount, revokeLoginSession, refreshSession, validateLogin } = require("../services/userService");
 const { readBody, sendJson } = require("../utils/http");
 
 async function login(request, response) {
@@ -12,7 +12,7 @@ async function login(request, response) {
     }
 
     sendJson(response, 200, { user });
-  } catch (error) {
+  } catch {
     sendJson(response, 400, { message: "Invalid request body." });
   }
 }
@@ -34,19 +34,35 @@ async function signup(request, response) {
     }
 
     sendJson(response, 201, { user: result.user });
-  } catch (error) {
+  } catch {
     sendJson(response, 400, { message: "Invalid request body." });
   }
 }
 
 async function logout(request, response) {
   try {
-    const { sessionToken } = await readBody(request);
-    await revokeLoginSession(sessionToken || "");
+    const { refreshToken } = await readBody(request);
+    await revokeLoginSession(refreshToken || "");
     sendJson(response, 200, { ok: true });
-  } catch (error) {
+  } catch {
     sendJson(response, 400, { message: "Invalid request body." });
   }
 }
 
-module.exports = { login, logout, signup };
+async function refresh(request, response) {
+  try {
+    const { refreshToken } = await readBody(request);
+    const result = await refreshSession(refreshToken || "");
+
+    if (!result) {
+      sendJson(response, 401, { message: "Invalid or expired refresh token." });
+      return;
+    }
+
+    sendJson(response, 200, result);
+  } catch {
+    sendJson(response, 400, { message: "Invalid request body." });
+  }
+}
+
+module.exports = { login, logout, signup, refresh };

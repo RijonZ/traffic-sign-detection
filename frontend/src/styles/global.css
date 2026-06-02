@@ -289,6 +289,16 @@ button:disabled {
   padding: 7px 10px;
 }
 
+.status-active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-inactive {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 .muted-text {
   color: #4b5563;
   line-height: 1.5;

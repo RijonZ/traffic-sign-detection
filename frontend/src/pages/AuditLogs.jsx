@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Navbar from "../shared/Navbar";
 import { usePagination, Pagination } from "../shared/Pagination";
+import { statusPillClass } from "../utils/statusUtils";
 import "../styles/audit-logs.css";
 import "../styles/auth.css";
 import "../styles/dashboard.css";
@@ -190,7 +191,7 @@ function AuditLogs({ currentUser, onLogout, onNavigate }) {
                 <p>{log.action}</p>
                 <p>{log.module}</p>
                 <p>{log.user}</p>
-                <p><span className="status-pill">{log.status}</span></p>
+                <p><span className={statusPillClass(log.status)}>{log.status}</span></p>
                 <p>{log.time}</p>
               </div>
             ))}

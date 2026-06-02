@@ -1,4 +1,13 @@
+const bcrypt = require("bcrypt");
+const crypto = require("crypto");
 const userRepo = require("../repositories/userRepository");
+const { signAccessToken, signRefreshToken, verifyRefreshToken } = require("../utils/jwt");
+
+const BCRYPT_ROUNDS = 12;
+
+function hashToken(token) {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
 
 function formatUser(user) {
   const fullName = [user.first_name, user.last_name].filter(Boolean).join(" ").trim();
@@ -48,11 +57,12 @@ function getUsersSummaryFromList(users) {
   };
 }
 
-async function createLoginSession(userId) {
-  const sessionToken = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+async function createLoginSession(userId, email, role) {
+  const accessToken = signAccessToken({ sub: String(userId), email, role });
+  const refreshToken = signRefreshToken(userId);
   await userRepo.revokeActiveTokensByUserId(userId);
-  await userRepo.insertToken(userId, sessionToken);
-  return sessionToken;
+  await userRepo.insertToken(userId, hashToken(refreshToken));
+  return { accessToken, refreshToken };
 }
 
 function splitName(name) {
@@ -92,11 +102,11 @@ async function createUserAccount(name, email, password) {
   const { firstName, lastName } = splitName(name);
   const roleName = getRoleFromEmail(email);
   const roleId = await userRepo.upsertRole(roleName, `${roleName} access role`);
-  const newUser = await userRepo.insert(firstName, lastName, email, password);
+  const newUser = await userRepo.insert(firstName, lastName, email, await bcrypt.hash(password, BCRYPT_ROUNDS));
 
   await userRepo.insertUserRole(newUser.id, roleId);
 
-  const sessionToken = await createLoginSession(newUser.id);
+  const { accessToken, refreshToken } = await createLoginSession(newUser.id, email, roleName);
   const { createNotificationForEmail, notifyRoles } = require("./notificationService");
 
   await createNotificationForEmail(
@@ -118,7 +128,8 @@ async function createUserAccount(name, email, password) {
       ...formatUser({ ...newUser, role: roleName }),
       sessionStatus: "Online",
       lastLoginAt: new Date().toISOString(),
-      sessionToken,
+      accessToken,
+      refreshToken,
     },
   };
 }
@@ -189,32 +200,55 @@ async function updateProfile(email, { name, password }) {
   }
 
   if (password !== undefined) {
-    await userRepo.updatePassword(user.id, password);
+    await userRepo.updatePassword(user.id, await bcrypt.hash(password, BCRYPT_ROUNDS));
   }
 
   const updated = await findUserByEmail(email);
   return { ok: true, user: formatUser(updated) };
 }
 
-async function revokeLoginSession(sessionToken) {
-  if (!sessionToken) return;
-  await userRepo.revokeTokenByHash(sessionToken);
+async function revokeLoginSession(refreshToken) {
+  if (!refreshToken) return;
+  await userRepo.revokeTokenByHash(hashToken(refreshToken));
+}
+
+async function refreshSession(refreshToken) {
+  if (!refreshToken) return null;
+  const payload = verifyRefreshToken(refreshToken);
+  if (!payload) return null;
+  const user = await userRepo.findByTokenHash(hashToken(refreshToken));
+  if (!user) return null;
+  const accessToken = signAccessToken({ sub: String(user.id), email: user.email, role: user.role });
+  return { accessToken };
 }
 
 async function validateLogin(email, password) {
   const user = await findUserByEmail(email);
 
-  if (!user || user.password_hash !== password || !user.is_active) {
-    return null;
+  if (!user || !user.is_active) return null;
+
+  const isHashed = user.password_hash.startsWith("$2b$") || user.password_hash.startsWith("$2a$");
+  let passwordMatch;
+
+  if (isHashed) {
+    passwordMatch = await bcrypt.compare(password, user.password_hash).catch(() => false);
+  } else {
+    passwordMatch = user.password_hash === password;
+    if (passwordMatch) {
+      await userRepo.updatePassword(user.id, await bcrypt.hash(password, BCRYPT_ROUNDS));
+    }
   }
 
-  const sessionToken = await createLoginSession(user.id);
+  if (!passwordMatch) return null;
+
+  const { accessToken, refreshToken } = await createLoginSession(user.id, user.email, user.role);
 
   return {
     ...formatUser(user),
     sessionStatus: "Online",
     lastLoginAt: new Date().toISOString(),
-    sessionToken,
+    accessToken,
+    refreshToken,
   };
 }
 
@@ -228,5 +262,6 @@ module.exports = {
   updateProfile,
   deleteUser,
   revokeLoginSession,
+  refreshSession,
   validateLogin,
 };

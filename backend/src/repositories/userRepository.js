@@ -112,10 +112,30 @@ async function insertToken(userId, tokenHash) {
   await query(
     `
       INSERT INTO refresh_tokens (user_id, token_hash, expires_at)
-      VALUES ($1, $2, now() + INTERVAL '8 hours')
+      VALUES ($1, $2, now() + INTERVAL '7 days')
     `,
     [userId, tokenHash]
   );
+}
+
+async function findByTokenHash(tokenHash) {
+  const result = await query(
+    `
+      SELECT u.id, u.email,
+             trim(concat(u.first_name, ' ', u.last_name)) AS name,
+             COALESCE(r.name, 'User') AS role
+      FROM refresh_tokens rt
+      JOIN users u ON u.id = rt.user_id
+      LEFT JOIN user_roles ur ON ur.user_id = u.id
+      LEFT JOIN roles r ON r.id = ur.role_id
+      WHERE rt.token_hash = $1
+        AND rt.revoked_at IS NULL
+        AND rt.expires_at > now()
+      LIMIT 1
+    `,
+    [tokenHash]
+  );
+  return result.rows[0] || null;
 }
 
 async function revokeTokenByHash(tokenHash) {
@@ -194,6 +214,7 @@ module.exports = {
   revokeActiveTokensByUserId,
   insertToken,
   revokeTokenByHash,
+  findByTokenHash,
   countAdmins,
   getRoleName,
   setActiveStatus,

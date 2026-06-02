@@ -1,4 +1,4 @@
-const { login, logout, signup } = require("../controllers/authController");
+const { login, logout, signup, refresh } = require("../controllers/authController");
 const { sendMessage } = require("../controllers/chatController");
 const {
   getAdminAuditLogs,
@@ -12,6 +12,7 @@ const {
   getAdminSettings,
   updateAdminSettings,
   getAdminFeedbacks,
+  downloadAdminReport,
 } = require("../controllers/adminController");
 const {
   createDetectSignRequest,
@@ -53,6 +54,7 @@ const routes = [
   { method: "POST", path: /^\/api\/auth\/login$/, handler: login },
   { method: "POST", path: /^\/api\/auth\/signup$/, handler: signup },
   { method: "POST", path: /^\/api\/auth\/logout$/, handler: logout },
+  { method: "POST", path: /^\/api\/auth\/refresh$/, handler: refresh },
   { method: "POST", path: /^\/api\/chat$/, handler: sendMessage },
   { method: "GET", path: /^\/api\/payments\/subscription$/, handler: getSubscription },
   { method: "POST", path: /^\/api\/payments\/basic-plan$/, handler: activateBasicPlan },
@@ -75,6 +77,7 @@ const routes = [
   { method: "GET", path: /^\/api\/admin\/settings$/, handler: getAdminSettings },
   { method: "PUT", path: /^\/api\/admin\/settings$/, handler: updateAdminSettings },
   { method: "GET", path: /^\/api\/admin\/feedbacks$/, handler: getAdminFeedbacks },
+  { method: "GET", path: /^\/api\/admin\/reports\/([^/]+)\/pdf$/, handler: downloadAdminReport },
   { method: "GET", path: /^\/api\/manager\/dashboard-analytics$/, handler: getDashboardAnalytics },
   { method: "GET", path: /^\/api\/manager\/export-data$/, handler: getManagerExportData },
   { method: "PUT", path: /^\/api\/users\/([^/]+)\/profile$/, handler: updateUserProfile },

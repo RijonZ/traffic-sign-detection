@@ -43,15 +43,6 @@
   white-space: nowrap;
 }
 
-.status-active {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.status-inactive {
-  background: #fee2e2;
-  color: #991b1b;
-}
 
 .users-actions {
   align-items: center;

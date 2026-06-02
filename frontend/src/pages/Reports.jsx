@@ -96,10 +96,24 @@ function Reports({ currentUser, onLogout, onNavigate }) {
     : 0;
 
   function downloadReport(report) {
-    downloadReportPdf(
-      { ...report, user: report.requestedBy },
-      `${report.id.toLowerCase()}-traffic-sign-report.pdf`
-    );
+    fetch(
+      `${API_BASE_URL}/admin/reports/${encodeURIComponent(report.id)}/pdf?adminEmail=${encodeURIComponent(currentUser.email)}`
+    )
+      .then((response) => (response.ok ? response.blob() : Promise.reject()))
+      .then((blob) => {
+        const reportUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = reportUrl;
+        link.download = `${report.id.toLowerCase()}-traffic-sign-report.pdf`;
+        link.click();
+        URL.revokeObjectURL(reportUrl);
+      })
+      .catch(() => {
+        downloadReportPdf(
+          { ...report, user: report.requestedBy },
+          `${report.id.toLowerCase()}-traffic-sign-report.pdf`
+        );
+      });
   }
 
   if (!currentUser) {

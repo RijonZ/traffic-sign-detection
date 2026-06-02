@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Navbar from "../shared/Navbar";
+import { usePagination, Pagination } from "../shared/Pagination";
 import { statusPillClass } from "../utils/statusUtils";
 import "../styles/auth.css";
 import "../styles/dashboard.css";
@@ -64,6 +65,8 @@ function ExportData({ currentUser, onLogout, onNavigate }) {
       })
       .finally(() => setLoading(false));
   }, [currentUser]);
+
+  const { page, setPage, totalPages, paginatedItems, pageSize } = usePagination(detections);
 
   function exportData() {
     if (!detections.length) {
@@ -161,7 +164,7 @@ function ExportData({ currentUser, onLogout, onNavigate }) {
               </p>
             )}
 
-            {detections.map((item) => (
+            {paginatedItems.map((item) => (
               <div className="report-row" key={item.id}>
                 <p>{item.id}</p>
                 <p>{item.fileName}</p>
@@ -170,6 +173,8 @@ function ExportData({ currentUser, onLogout, onNavigate }) {
                 <p>{item.confidence}%</p>
               </div>
             ))}
+
+            <Pagination page={page} totalPages={totalPages} total={detections.length} pageSize={pageSize} onPage={setPage} />
           </div>
 
           <aside className="report-detail">
