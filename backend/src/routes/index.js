@@ -20,6 +20,7 @@ const {
   getDashboard,
   getDetections,
   createDetection,
+  downloadReport,
   getReports,
 } = require("../controllers/dashboardController");
 const {
@@ -76,6 +77,7 @@ const routes = [
   { method: "GET", path: /^\/api\/users\/([^/]+)\/dashboard$/, handler: getDashboard },
   { method: "GET", path: /^\/api\/users\/([^/]+)\/detections$/, handler: getDetections },
   { method: "POST", path: /^\/api\/users\/([^/]+)\/detections$/, handler: createDetection },
+  { method: "GET", path: /^\/api\/users\/([^/]+)\/reports\/([^/]+)\/pdf$/, handler: downloadReport },
   { method: "GET", path: /^\/api\/users\/([^/]+)\/reports$/, handler: getReports },
   { method: "GET", path: /^\/api\/users\/([^/]+)\/notifications$/, handler: getNotifications },
   { method: "POST", path: /^\/api\/users\/([^/]+)\/notifications\/read$/, handler: markAsRead },

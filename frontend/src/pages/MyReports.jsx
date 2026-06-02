@@ -95,10 +95,27 @@ function MyReports({ currentUser, onLogout, onNavigate }) {
     : 0;
 
   function downloadReport(report) {
-    downloadReportPdf(
-      { ...report, user: currentUser.name },
-      `${report.id.toLowerCase()}-traffic-sign-report.pdf`
-    );
+    fetch(
+      `${API_BASE_URL}/users/${encodeURIComponent(currentUser.email)}/reports/${encodeURIComponent(
+        report.id
+      )}/pdf`
+    )
+      .then((response) => (response.ok ? response.blob() : Promise.reject()))
+      .then((blob) => {
+        const reportUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = reportUrl;
+        link.download = `${report.id.toLowerCase()}-traffic-sign-report.pdf`;
+        link.click();
+        URL.revokeObjectURL(reportUrl);
+      })
+      .catch(() => {
+        setStatusMessage("Backend PDF is not available, downloading a local report instead.");
+        downloadReportPdf(
+          { ...report, user: currentUser.name },
+          `${report.id.toLowerCase()}-traffic-sign-report.pdf`
+        );
+      });
   }
 
   if (!currentUser) {
@@ -203,7 +220,7 @@ function MyReports({ currentUser, onLogout, onNavigate }) {
             <div className="report-modal" onClick={(e) => e.stopPropagation()}>
               <div className="report-modal-header">
                 <span className="eyebrow">Report detail</span>
-                <button className="report-modal-close" onClick={() => setSelectedReport(null)}>✕</button>
+                <button className="report-modal-close" onClick={() => setSelectedReport(null)}>x</button>
               </div>
               <h2>{selectedReport.id}</h2>
               <p><strong>Image:</strong> {selectedReport.fileName}</p>
