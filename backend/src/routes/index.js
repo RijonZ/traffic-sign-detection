@@ -11,6 +11,7 @@ const {
   deleteAdminUser,
   getAdminSettings,
   updateAdminSettings,
+  getAdminFeedbacks,
 } = require("../controllers/adminController");
 const {
   createDetectSignRequest,
@@ -43,6 +44,7 @@ const {
   getDashboardAnalytics,
   getManagerExportData,
 } = require("../controllers/managerController");
+const { postFeedback, getFeedback, getMyFeedbacks } = require("../controllers/feedbackController");
 const { sendJson, sendOptions, notFound } = require("../utils/http");
 
 const routes = [
@@ -59,6 +61,9 @@ const routes = [
   { method: "POST", path: /^\/api\/payments\/confirm-checkout-session$/, handler: confirmStripeCheckoutSession },
   { method: "GET", path: /^\/api\/detect-sign$/, handler: getDetectionHistory },
   { method: "POST", path: /^\/api\/detect-sign$/, handler: createDetectSignRequest },
+  { method: "GET", path: /^\/api\/detect-sign\/feedbacks$/, handler: getMyFeedbacks },
+  { method: "POST", path: /^\/api\/detect-sign\/([^/]+)\/feedback$/, handler: postFeedback },
+  { method: "GET", path: /^\/api\/detect-sign\/([^/]+)\/feedback$/, handler: getFeedback },
   { method: "GET", path: /^\/api\/admin\/model-monitoring$/, handler: getModelMonitoring },
   { method: "GET", path: /^\/api\/admin\/audit-logs$/, handler: getAdminAuditLogs },
   { method: "GET", path: /^\/api\/admin\/dashboard$/, handler: getAdminDashboardSummary },
@@ -69,6 +74,7 @@ const routes = [
   { method: "DELETE", path: /^\/api\/admin\/users\/([^/]+)$/, handler: deleteAdminUser },
   { method: "GET", path: /^\/api\/admin\/settings$/, handler: getAdminSettings },
   { method: "PUT", path: /^\/api\/admin\/settings$/, handler: updateAdminSettings },
+  { method: "GET", path: /^\/api\/admin\/feedbacks$/, handler: getAdminFeedbacks },
   { method: "GET", path: /^\/api\/manager\/dashboard-analytics$/, handler: getDashboardAnalytics },
   { method: "GET", path: /^\/api\/manager\/export-data$/, handler: getManagerExportData },
   { method: "PUT", path: /^\/api\/users\/([^/]+)\/profile$/, handler: updateUserProfile },

@@ -182,6 +182,9 @@ function AdminDashboard({ currentUser, onLogout, onNavigate }) {
               <button className="secondary-btn" onClick={() => onNavigate("settings")}>
                 Settings
               </button>
+              <button className="secondary-btn" onClick={() => onNavigate("feedbacks")}>
+                Feedbacks
+              </button>
             </div>
           </div>
 

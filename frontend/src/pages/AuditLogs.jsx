@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Navbar from "../shared/Navbar";
+import { usePagination, Pagination } from "../shared/Pagination";
 import "../styles/audit-logs.css";
 import "../styles/auth.css";
 import "../styles/dashboard.css";
@@ -99,6 +100,7 @@ function AuditLogs({ currentUser, onLogout, onNavigate }) {
       .catch(() => setLogs(fallbackLogs));
   }, [currentUser, fallbackLogs]);
 
+  const { page, setPage, totalPages, paginatedItems: paginatedLogs, pageSize } = usePagination(logs);
   const successLogs = logs.filter((log) => log.status === "Success" || log.status === "Completed").length;
   const reviewLogs = logs.filter((log) => log.status === "Review" || log.status === "Rejected").length;
   const modules = [...new Set(logs.map((log) => log.module))];
@@ -182,7 +184,7 @@ function AuditLogs({ currentUser, onLogout, onNavigate }) {
               <p>Time</p>
             </div>
 
-            {logs.map((log) => (
+            {paginatedLogs.map((log) => (
               <div className="audit-row" key={log.id}>
                 <p>{log.id}</p>
                 <p>{log.action}</p>
@@ -192,6 +194,7 @@ function AuditLogs({ currentUser, onLogout, onNavigate }) {
                 <p>{log.time}</p>
               </div>
             ))}
+            <Pagination page={page} totalPages={totalPages} total={logs.length} pageSize={pageSize} onPage={setPage} />
           </div>
 
           <aside className="audit-panel">

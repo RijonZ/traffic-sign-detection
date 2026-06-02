@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Navbar from "../shared/Navbar";
+import { usePagination, Pagination } from "../shared/Pagination";
 import "../styles/auth.css";
 import "../styles/dashboard.css";
 import "../styles/users.css";
@@ -118,6 +119,7 @@ function UsersPage({ currentUser, onLogout, onNavigate }) {
     }
   }
 
+  const { page, setPage, totalPages, paginatedItems: paginatedUsers, pageSize } = usePagination(users);
   const admins = users.filter((user) => user.role === "Administrator").length;
   const managers = users.filter((user) => user.role === "Manager").length;
   const regularUsers = users.filter((user) => user.role === "User").length;
@@ -213,7 +215,7 @@ function UsersPage({ currentUser, onLogout, onNavigate }) {
             <p>Actions</p>
           </div>
 
-          {users.map((user) => {
+          {paginatedUsers.map((user) => {
             const isSelf = user.email === currentUser.email;
             const isBeingSaved = saving === user.id;
             const isActive = user.status !== "Inactive";
@@ -281,6 +283,7 @@ function UsersPage({ currentUser, onLogout, onNavigate }) {
               </div>
             );
           })}
+          <Pagination page={page} totalPages={totalPages} total={users.length} pageSize={pageSize} onPage={setPage} />
         </section>
       </main>
     </div>

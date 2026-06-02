@@ -38,6 +38,7 @@ const adminLinks = [
   { label: "All Detections", page: "all-detections" },
   { label: "Users", page: "users" },
   { label: "Reports", page: "reports" },
+  { label: "Feedbacks", page: "feedbacks" },
   { label: "Model Monitoring", page: "model-monitoring" },
   { label: "Audit Logs", page: "audit-logs" },
   { label: "Settings", page: "settings" },

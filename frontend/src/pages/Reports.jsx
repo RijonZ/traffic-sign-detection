@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Navbar from "../shared/Navbar";
+import { usePagination, Pagination } from "../shared/Pagination";
 import { downloadReportPdf } from "../utils/reportPdf";
 import { statusPillClass } from "../utils/statusUtils";
 import "../styles/auth.css";
@@ -84,6 +85,7 @@ function Reports({ currentUser, onLogout, onNavigate }) {
       });
   }, [currentUser, fallbackReports]);
 
+  const { page, setPage, totalPages, paginatedItems: paginatedReports, pageSize } = usePagination(reports);
   const completed = reports.filter((report) => report.status === "Completed").length;
   const rejected = reports.filter((report) => report.status === "Rejected").length;
   const averageConfidence = reports.length
@@ -178,7 +180,7 @@ function Reports({ currentUser, onLogout, onNavigate }) {
             <p>Action</p>
           </div>
 
-          {reports.map((report) => (
+          {paginatedReports.map((report) => (
             <div className="admin-report-row" key={report.id}>
               <p>{report.id}</p>
               <p>{report.fileName}</p>
@@ -190,6 +192,7 @@ function Reports({ currentUser, onLogout, onNavigate }) {
               </button>
             </div>
           ))}
+          <Pagination page={page} totalPages={totalPages} total={reports.length} pageSize={pageSize} onPage={setPage} />
         </section>
 
         {selectedReport && (

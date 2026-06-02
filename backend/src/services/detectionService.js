@@ -1,4 +1,5 @@
 const detectionRepo = require("../repositories/detectionRepository");
+const rateLimitLogRepo = require("../repositories/rateLimitLogRepository");
 const { getClient: getRedis } = require("../db/redis");
 const { findUserByEmail } = require("./userService");
 
@@ -186,6 +187,10 @@ async function detectSign(email, file) {
     const { allowed, used, limit } = await checkRateLimit(user.id);
     if (!allowed) {
       const rateLimitMessage = `Basic plan allows ${limit} detections per month. You have used all ${used}. Upgrade to Premium or Team for unlimited detections.`;
+
+      const now = new Date();
+      const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+      await rateLimitLogRepo.insert(user.id, "Basic", used, month).catch(() => {});
 
       const rejectedDetection = await addDetection(email, {
         fileName: file?.fileName || "unknown-file",

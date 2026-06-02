@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Navbar from "../shared/Navbar";
+import { usePagination, Pagination } from "../shared/Pagination";
 import { downloadReportPdf } from "../utils/reportPdf";
 import { statusPillClass } from "../utils/statusUtils";
 import "../styles/auth.css";
@@ -86,6 +87,7 @@ function MyReports({ currentUser, onLogout, onNavigate }) {
       .finally(() => setIsLoading(false));
   }, [currentUser, fallbackReports]);
 
+  const { page, setPage, totalPages, paginatedItems: paginatedReports, pageSize } = usePagination(reports);
   const completedCount = reports.filter((report) => report.status === "Completed").length;
   const averageConfidence = reports.length
     ? Math.round(
@@ -190,7 +192,7 @@ function MyReports({ currentUser, onLogout, onNavigate }) {
             </div>
           )}
 
-          {!isLoading && reports.map((report) => (
+          {!isLoading && paginatedReports.map((report) => (
             <div className="report-row" key={report.id}>
               <p>{report.id}</p>
               <p>{report.fileName}</p>
@@ -204,6 +206,7 @@ function MyReports({ currentUser, onLogout, onNavigate }) {
             </div>
           ))}
 
+          {!isLoading && <Pagination page={page} totalPages={totalPages} total={reports.length} pageSize={pageSize} onPage={setPage} />}
           {!isLoading && !reports.length && (
             <div className="report-row">
               <p>No reports</p>

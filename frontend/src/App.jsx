@@ -20,6 +20,7 @@ import ProfilePage from "./pages/ProfilePage";
 import Reports from "./pages/Reports";
 import SettingsPage from "./pages/SettingsPage";
 import UsersPage from "./pages/UsersPage";
+import FeedbacksPage from "./pages/FeedbacksPage";
 
 const USERS_KEY = "traffic-sign-users";
 const SESSION_KEY = "traffic-sign-session";
@@ -240,6 +241,16 @@ function App() {
   if (page === "settings") {
     return (
       <SettingsPage
+        currentUser={currentUser}
+        onLogout={logout}
+        onNavigate={navigate}
+      />
+    );
+  }
+
+  if (page === "feedbacks") {
+    return (
+      <FeedbacksPage
         currentUser={currentUser}
         onLogout={logout}
         onNavigate={navigate}

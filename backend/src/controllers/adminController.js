@@ -5,6 +5,7 @@ const { getModelMonitoringSummary } = require("../services/modelMonitoringServic
 const { getAllReports } = require("../services/reportService");
 const { findUserByEmail, getAllUsers, getUsersSummaryFromList, updateUser, deleteUser } = require("../services/userService");
 const { getSettings, updateSettings } = require("../services/settingsService");
+const { getAllFeedbacks } = require("../services/feedbackService");
 const { sendJson, readBody } = require("../utils/http");
 
 async function getAdminUser(request) {
@@ -120,6 +121,11 @@ async function updateAdminSettings(request, response) {
   }
 }
 
+async function getAdminFeedbacks(request, response) {
+  if (!(await ensureAdministrator(request, response))) return;
+  sendJson(response, 200, { feedbacks: await getAllFeedbacks() });
+}
+
 module.exports = {
   getAdminAuditLogs,
   getAdminDashboardSummary,
@@ -131,4 +137,5 @@ module.exports = {
   deleteAdminUser,
   getAdminSettings,
   updateAdminSettings,
+  getAdminFeedbacks,
 };

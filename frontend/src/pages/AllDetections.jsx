@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Navbar from "../shared/Navbar";
+import { usePagination, Pagination } from "../shared/Pagination";
 import { statusPillClass } from "../utils/statusUtils";
 import "../styles/all-detections.css";
 import "../styles/auth.css";
@@ -81,6 +82,7 @@ function readDetections() {
 function AllDetections({ currentUser, onLogout, onNavigate }) {
   const fallbackDetections = useMemo(readDetections, []);
   const [detections, setDetections] = useState(fallbackDetections);
+  const { page, setPage, totalPages, paginatedItems, pageSize } = usePagination(detections);
 
   useEffect(() => {
     if (!currentUser || currentUser.role !== "Administrator") {
@@ -211,7 +213,7 @@ function AllDetections({ currentUser, onLogout, onNavigate }) {
             <p>Status</p>
           </div>
 
-          {detections.map((item) => (
+          {paginatedItems.map((item) => (
             <div className="detections-row" key={item.id}>
               <p>{item.id}</p>
               <p>{item.fileName}</p>
@@ -223,6 +225,7 @@ function AllDetections({ currentUser, onLogout, onNavigate }) {
               </p>
             </div>
           ))}
+          <Pagination page={page} totalPages={totalPages} total={detections.length} pageSize={pageSize} onPage={setPage} />
         </section>
       </main>
     </div>
