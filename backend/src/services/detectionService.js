@@ -1,4 +1,4 @@
-const { query } = require("../db/client");
+const detectionRepo = require("../repositories/detectionRepository");
 const { getClient: getRedis } = require("../db/redis");
 const { findUserByEmail } = require("./userService");
 
@@ -72,50 +72,9 @@ function formatStatus(status) {
     .join(" ");
 }
 
-async function getTrafficSignId(sign, category) {
-  const result = await query(
-    `
-      INSERT INTO traffic_signs (sign_name, category)
-      VALUES ($1, $2)
-      ON CONFLICT (sign_name) DO UPDATE SET category = excluded.category
-      RETURNING id
-    `,
-    [sign, category || "Unknown"]
-  );
-
-  return result.rows[0].id;
-}
-
 async function getUserDetections(email) {
-  const result = await query(
-    `
-      SELECT
-        dr.id AS request_id,
-        dr.status,
-        dr.requested_at,
-        dr.completed_at,
-        trim(concat(u.first_name, ' ', u.last_name)) AS user_name,
-        u.email AS user_email,
-        f.filename,
-        f.file_size,
-        f.entity AS file_type,
-        ts.sign_name,
-        ts.category,
-        res.confidence,
-        res.bounding_box,
-        res.detected_at
-      FROM detection_requests dr
-      JOIN users u ON u.id = dr.user_id
-      LEFT JOIN files f ON f.id = dr.file_id
-      LEFT JOIN detection_results res ON res.request_id = dr.id
-      LEFT JOIN traffic_signs ts ON ts.id = res.traffic_sign_id
-      WHERE lower(u.email) = lower($1)
-      ORDER BY dr.requested_at DESC
-    `,
-    [email]
-  );
-
-  return result.rows.map(formatDetection);
+  const rows = await detectionRepo.findByUserEmail(email);
+  return rows.map(formatDetection);
 }
 
 function getDetectionsSummary(detections) {
@@ -139,32 +98,8 @@ function getDetectionsSummary(detections) {
 }
 
 async function getAllDetections() {
-  const result = await query(
-    `
-      SELECT
-        dr.id AS request_id,
-        dr.status,
-        dr.requested_at,
-        dr.completed_at,
-        trim(concat(u.first_name, ' ', u.last_name)) AS user_name,
-        u.email AS user_email,
-        f.filename,
-        f.file_size,
-        f.entity AS file_type,
-        ts.sign_name,
-        ts.category,
-        res.confidence,
-        res.bounding_box,
-        res.detected_at
-      FROM detection_requests dr
-      JOIN users u ON u.id = dr.user_id
-      LEFT JOIN files f ON f.id = dr.file_id
-      LEFT JOIN detection_results res ON res.request_id = dr.id
-      LEFT JOIN traffic_signs ts ON ts.id = res.traffic_sign_id
-      ORDER BY dr.requested_at DESC
-    `
-  );
-  const detections = result.rows.map(formatDetection);
+  const rows = await detectionRepo.findAll();
+  const detections = rows.map(formatDetection);
 
   return {
     detections,
@@ -180,39 +115,26 @@ async function addDetection(email, data) {
   }
 
   const status = normalizeStatus(data.status || "Completed");
-  const fileResult = await query(
-    `
-      INSERT INTO files (entity, filename, file_path, file_size, uploaded_by)
-      VALUES ($1, $2, $3, $4, $5)
-      RETURNING id
-    `,
-    [
-      data.fileType || "image/unknown",
-      data.fileName || "unknown-file",
-      data.fileName || "unknown-file",
-      Number(data.fileSize || 0),
-      user.id,
-    ]
-  );
-  const fileId = fileResult.rows[0].id;
 
-  const requestResult = await query(
-    `
-      INSERT INTO detection_requests (user_id, file_id, status, completed_at)
-      VALUES ($1, $2, $3, now())
-      RETURNING id
-    `,
-    [user.id, fileId, status]
+  const fileId = await detectionRepo.insertFile(
+    data.fileType || "image/unknown",
+    data.fileName || "unknown-file",
+    data.fileName || "unknown-file",
+    Number(data.fileSize || 0),
+    user.id
   );
-  const requestId = requestResult.rows[0].id;
-  const trafficSignId = await getTrafficSignId(data.sign || "Not detected", data.category || "Unknown");
 
-  await query(
-    `
-      INSERT INTO detection_results (request_id, traffic_sign_id, confidence, bounding_box)
-      VALUES ($1, $2, $3, $4)
-    `,
-    [requestId, trafficSignId, Number(data.confidence || 0), data.box || ""]
+  const requestId = await detectionRepo.insertRequest(user.id, fileId, status);
+  const trafficSignId = await detectionRepo.upsertTrafficSign(
+    data.sign || "Not detected",
+    data.category || "Unknown"
+  );
+
+  await detectionRepo.insertResult(
+    requestId,
+    trafficSignId,
+    Number(data.confidence || 0),
+    data.box || ""
   );
 
   const [detection] = await getUserDetections(email);
@@ -226,13 +148,7 @@ function monthRateKey(userId) {
 }
 
 async function getUserPlan(userId) {
-  const result = await query(
-    `SELECT plan_name FROM subscriptions
-     WHERE user_id = $1 AND is_active = true
-     ORDER BY start_date DESC LIMIT 1`,
-    [userId]
-  );
-  return (result.rows[0]?.plan_name || "Basic").toLowerCase();
+  return (await detectionRepo.findActivePlanByUserId(userId)).toLowerCase();
 }
 
 async function checkRateLimit(userId) {

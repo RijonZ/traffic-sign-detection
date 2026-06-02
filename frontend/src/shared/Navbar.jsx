@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import ChatBot from "./ChatBot";
+import { getSocket } from "../socket/socket";
 
 const API_BASE_URL = "http://localhost:5000/api";
 
@@ -43,6 +44,15 @@ const adminLinks = [
   { label: "My Profile", page: "profile" },
 ];
 
+function getNotificationPage(type, role) {
+  if (type === "new-user") return role === "Administrator" ? "users" : "dashboard";
+  if (type === "detection-completed" || type === "detection-rejected") {
+    return role === "Administrator" || role === "Manager" ? "all-detections" : "history";
+  }
+  if (type === "account") return role === "Administrator" ? "admin-dashboard" : "dashboard";
+  return "dashboard";
+}
+
 function getLinks(currentUser) {
   if (!currentUser) {
     return publicLinks;
@@ -72,17 +82,24 @@ function Navbar({ currentUser, onLogout, onNavigate }) {
       return;
     }
 
-    function loadNotifications() {
-      fetch(`${API_BASE_URL}/users/${encodeURIComponent(currentUser.email)}/notifications`)
-        .then((response) => (response.ok ? response.json() : null))
-        .then((data) => setNotifications(data?.notifications || []))
-        .catch(() => setNotifications([]));
+    fetch(`${API_BASE_URL}/users/${encodeURIComponent(currentUser.email)}/notifications`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => setNotifications(data?.notifications || []))
+      .catch(() => setNotifications([]));
+
+    const socket = getSocket();
+    if (!socket) return;
+
+    function handleNewNotification(notification) {
+      const page = getNotificationPage(notification.type, currentUser.role);
+      setNotifications((prev) => [{ ...notification, isRead: false, page }, ...prev]);
     }
 
-    loadNotifications();
-    const refreshTimer = window.setInterval(loadNotifications, 5000);
+    socket.on("notification", handleNewNotification);
 
-    return () => window.clearInterval(refreshTimer);
+    return () => {
+      socket.off("notification", handleNewNotification);
+    };
   }, [currentUser]);
 
   function openNotification(notification) {

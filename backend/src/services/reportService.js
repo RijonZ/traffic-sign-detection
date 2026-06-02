@@ -1,5 +1,5 @@
 const { getUserDetections } = require("./detectionService");
-const { query } = require("../db/client");
+const homeRepo = require("../repositories/homeRepository");
 
 function formatReport(item) {
   return {
@@ -40,17 +40,11 @@ function getReportsSummary(reports) {
 }
 
 async function getAllReports() {
-  const result = await query(
-    `
-      SELECT email
-      FROM users
-      ORDER BY created_at DESC
-    `
-  );
+  const emails = await homeRepo.findAllUserEmails();
   const reportGroups = await Promise.all(
-    result.rows.map(async (user) => {
-      const detections = await getUserDetections(user.email);
-      return detections.map((item) => formatReport({ ...item, requestedBy: user.email }));
+    emails.map(async (email) => {
+      const detections = await getUserDetections(email);
+      return detections.map((item) => formatReport({ ...item, requestedBy: email }));
     })
   );
   const reports = reportGroups.flat();

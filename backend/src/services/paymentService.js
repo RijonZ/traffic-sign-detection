@@ -1,5 +1,6 @@
 const Stripe = require("stripe");
-const { pool, query } = require("../db/client");
+const { pool } = require("../db/client");
+const paymentRepo = require("../repositories/paymentRepository");
 const { getClient: getRedis } = require("../db/redis");
 
 const SUBSCRIPTION_CACHE_TTL = 300;
@@ -77,15 +78,6 @@ function formatPayment(plan, subscription, payment) {
   };
 }
 
-async function getUserByEmail(userEmail) {
-  const result = await query(
-    "SELECT id, email FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1",
-    [userEmail],
-  );
-
-  return result.rows[0] || null;
-}
-
 function getStripeClient() {
   if (!process.env.STRIPE_SECRET_KEY) {
     throw new Error("STRIPE_SECRET_KEY is missing. Add it to the project .env file.");
@@ -106,7 +98,7 @@ async function createCheckoutSession(userEmail, planId) {
   }
 
   const stripe = getStripeClient();
-  const user = await getUserByEmail(userEmail);
+  const user = await paymentRepo.findUserByEmail(userEmail);
 
   if (!user) {
     return { ok: false, statusCode: 404, message: "User was not found." };
@@ -149,34 +141,13 @@ async function getCurrentSubscription(userEmail) {
   const cached = await getCachedSubscription(userEmail);
   if (cached) return cached;
 
-  const user = await getUserByEmail(userEmail);
+  const user = await paymentRepo.findUserByEmail(userEmail);
 
   if (!user) {
     return { ok: false, statusCode: 404, message: "User was not found." };
   }
 
-  const result = await query(
-    `
-      SELECT
-        s.plan_name,
-        s.start_date,
-        s.end_date,
-        s.is_active,
-        p.amount,
-        p.currency,
-        p.paid_at
-      FROM subscriptions s
-      LEFT JOIN payments p
-        ON p.user_id = s.user_id
-        AND p.paid_at >= s.start_date - INTERVAL '1 minute'
-        AND p.paid_at <= s.start_date + INTERVAL '5 minutes'
-      WHERE s.user_id = $1 AND s.is_active = true
-      ORDER BY s.start_date DESC, p.paid_at DESC
-      LIMIT 1
-    `,
-    [user.id],
-  );
-  const subscription = result.rows[0];
+  const subscription = await paymentRepo.findActiveSubscription(user.id);
 
   if (!subscription) {
     const empty = { ok: true, payment: null };
@@ -191,9 +162,9 @@ async function getCurrentSubscription(userEmail) {
     amount: Number(subscription.amount || 0) * 100,
   };
 
-  const result2 = { ok: true, payment: formatPayment(plan, subscription, subscription) };
-  await setCachedSubscription(userEmail, result2);
-  return result2;
+  const result = { ok: true, payment: formatPayment(plan, subscription, subscription) };
+  await setCachedSubscription(userEmail, result);
+  return result;
 }
 
 async function activateBasicSubscription(userEmail) {
@@ -207,7 +178,7 @@ async function activateDemoSubscription(userEmail, planId) {
     return { ok: false, statusCode: 400, message: "Selected plan is not available." };
   }
 
-  const user = await getUserByEmail(userEmail);
+  const user = await paymentRepo.findUserByEmail(userEmail);
 
   if (!user) {
     return { ok: false, statusCode: 404, message: "User was not found." };
@@ -217,29 +188,24 @@ async function activateDemoSubscription(userEmail, planId) {
   try {
     await client.query("BEGIN");
 
-    await client.query(
-      "UPDATE subscriptions SET is_active = false, end_date = now() WHERE user_id = $1 AND is_active = true",
-      [user.id],
+    await paymentRepo.deactivateSubscriptions(client, user.id);
+
+    const payment = await paymentRepo.insertPayment(
+      client,
+      user.id,
+      plan.amount / 100,
+      String(plan.currency || "USD").toUpperCase(),
+      "demo",
+      "paid"
     );
 
-    const paymentResult = await client.query(
-      `INSERT INTO payments (user_id, amount, currency, provider, status, paid_at)
-       VALUES ($1, $2, $3, $4, $5, now())
-       RETURNING id, paid_at`,
-      [user.id, plan.amount / 100, String(plan.currency || "USD").toUpperCase(), "demo", "paid"],
-    );
+    const subscription = await paymentRepo.insertSubscription(client, user.id, plan.name);
 
-    const subscriptionResult = await client.query(
-      `INSERT INTO subscriptions (user_id, plan_name, start_date, end_date, is_active)
-       VALUES ($1, $2, now(), now() + INTERVAL '1 month', true)
-       RETURNING plan_name, start_date, end_date, is_active`,
-      [user.id, plan.name],
-    );
-
-    await client.query(
-      `INSERT INTO payment_logs (payment_id, event_type, event_payload)
-       VALUES ($1, $2, $3)`,
-      [paymentResult.rows[0].id, "demo_subscription_activated", JSON.stringify({ userEmail: user.email, planId: plan.id })],
+    await paymentRepo.insertPaymentLog(
+      client,
+      payment.id,
+      "demo_subscription_activated",
+      { userEmail: user.email, planId: plan.id }
     );
 
     await client.query("COMMIT");
@@ -247,7 +213,7 @@ async function activateDemoSubscription(userEmail, planId) {
 
     return {
       ok: true,
-      payment: formatPayment(plan, subscriptionResult.rows[0], paymentResult.rows[0]),
+      payment: formatPayment(plan, subscription, payment),
     };
   } catch (err) {
     await client.query("ROLLBACK");
@@ -272,15 +238,8 @@ async function confirmCheckoutSession(sessionId, userEmail) {
     return { ok: false, statusCode: 402, message: "Stripe payment is not completed yet." };
   }
 
-  // Idempotency: nëse sesioni është procesuar tashmë, kthe subscriptionin aktual
-  const already = await query(
-    `SELECT pl.payment_id FROM payment_logs pl
-     WHERE pl.event_type = 'stripe_checkout_session_completed'
-     AND pl.event_payload->>'sessionId' = $1
-     LIMIT 1`,
-    [session.id],
-  );
-  if (already.rows.length) {
+  const already = await paymentRepo.findPaymentLogBySession(session.id);
+  if (already) {
     const current = await getCurrentSubscription(userEmail);
     return current.ok
       ? { ok: true, payment: current.payment }
@@ -291,36 +250,30 @@ async function confirmCheckoutSession(sessionId, userEmail) {
   try {
     await client.query("BEGIN");
 
-    const paymentResult = await client.query(
-      `INSERT INTO payments (user_id, amount, currency, provider, status, paid_at)
-       VALUES ($1, $2, $3, $4, $5, now())
-       RETURNING id, user_id, amount, currency, paid_at`,
-      [userId, plan.amount / 100, plan.currency.toUpperCase(), "stripe", "paid"],
-    );
-    const payment = paymentResult.rows[0];
-
-    await client.query(
-      "UPDATE subscriptions SET is_active = false, end_date = now() WHERE user_id = $1 AND is_active = true",
-      [payment.user_id],
+    const payment = await paymentRepo.insertPayment(
+      client,
+      userId,
+      plan.amount / 100,
+      plan.currency.toUpperCase(),
+      "stripe",
+      "paid"
     );
 
-    const subscriptionResult = await client.query(
-      `INSERT INTO subscriptions (user_id, plan_name, start_date, end_date, is_active)
-       VALUES ($1, $2, now(), now() + INTERVAL '1 month', true)
-       RETURNING plan_name, start_date, end_date, is_active`,
-      [payment.user_id, plan.name],
-    );
+    await paymentRepo.deactivateSubscriptions(client, payment.user_id || userId);
 
-    await client.query(
-      `INSERT INTO payment_logs (payment_id, event_type, event_payload)
-       VALUES ($1, $2, $3)`,
-      [payment.id, "stripe_checkout_session_completed", JSON.stringify({ sessionId: session.id, planId: plan.id })],
+    const subscription = await paymentRepo.insertSubscription(client, payment.user_id || userId, plan.name);
+
+    await paymentRepo.insertPaymentLog(
+      client,
+      payment.id,
+      "stripe_checkout_session_completed",
+      { sessionId: session.id, planId: plan.id }
     );
 
     await client.query("COMMIT");
     await invalidateSubscriptionCache(userEmail);
 
-    return { ok: true, payment: formatPayment(plan, subscriptionResult.rows[0], payment) };
+    return { ok: true, payment: formatPayment(plan, subscription, payment) };
   } catch (err) {
     await client.query("ROLLBACK");
     throw err;
@@ -330,20 +283,15 @@ async function confirmCheckoutSession(sessionId, userEmail) {
 }
 
 async function cancelSubscription(userEmail) {
-  const user = await getUserByEmail(userEmail);
+  const user = await paymentRepo.findUserByEmail(userEmail);
 
   if (!user) {
     return { ok: false, statusCode: 404, message: "User was not found." };
   }
 
-  const result = await query(
-    `UPDATE subscriptions SET is_active = false, end_date = now()
-     WHERE user_id = $1 AND is_active = true
-     RETURNING id`,
-    [user.id]
-  );
+  const rows = await paymentRepo.cancelActiveSubscription(user.id);
 
-  if (!result.rows.length) {
+  if (!rows.length) {
     return { ok: false, statusCode: 404, message: "No active subscription found." };
   }
 

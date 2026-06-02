@@ -1,4 +1,4 @@
-const { query } = require("../db/client");
+const settingsRepo = require("../repositories/settingsRepository");
 
 const DEFAULT_SETTINGS = {
   maxUploadSize: "5",
@@ -41,8 +41,8 @@ function parseSettings(rows) {
 }
 
 async function getSettings() {
-  const result = await query(`SELECT key, value FROM settings`);
-  return parseSettings(result.rows);
+  const rows = await settingsRepo.findAll();
+  return parseSettings(rows);
 }
 
 async function updateSettings(updates) {
@@ -52,15 +52,7 @@ async function updateSettings(updates) {
     if (!allowedKeys.includes(key)) continue;
 
     const strValue = BOOLEAN_KEYS.includes(key) ? String(Boolean(value)) : String(value);
-
-    await query(
-      `
-        INSERT INTO settings (key, value, description, updated_at)
-        VALUES ($1, $2, $3, now())
-        ON CONFLICT (key) DO UPDATE SET value = excluded.value, updated_at = now()
-      `,
-      [key, strValue, SETTING_DESCRIPTIONS[key] || ""]
-    );
+    await settingsRepo.upsert(key, strValue, SETTING_DESCRIPTIONS[key] || "");
   }
 
   return getSettings();

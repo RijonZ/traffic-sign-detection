@@ -1,5 +1,6 @@
-const { query } = require("../db/client");
+const notificationRepo = require("../repositories/notificationRepository");
 const { findUserByEmail } = require("./userService");
+const { emitToUser } = require("../socket/socketManager");
 
 function getNotificationPage(type, role) {
   if (type === "new-user") {
@@ -30,13 +31,17 @@ function formatNotification(row) {
 }
 
 async function createNotificationForUserId(userId, type, title, message) {
-  await query(
-    `
-      INSERT INTO notifications (user_id, type, title, message)
-      VALUES ($1, $2, $3, $4)
-    `,
-    [userId, type, title, message]
-  );
+  const row = await notificationRepo.insert(userId, type, title, message);
+
+  emitToUser(userId, "notification", {
+    id: String(row.id),
+    type,
+    title,
+    message,
+    isRead: false,
+    page: null,
+    createdAt: row.created_at,
+  });
 }
 
 async function createNotificationForEmail(email, type, title, message) {
@@ -50,74 +55,21 @@ async function createNotificationForEmail(email, type, title, message) {
 }
 
 async function notifyRoles(roleNames, type, title, message) {
-  const result = await query(
-    `
-      SELECT DISTINCT u.id
-      FROM users u
-      JOIN user_roles ur ON ur.user_id = u.id
-      JOIN roles r ON r.id = ur.role_id
-      WHERE r.name = ANY($1)
-        AND u.is_active = true
-    `,
-    [roleNames]
-  );
-
-  await Promise.all(
-    result.rows.map((row) => createNotificationForUserId(row.id, type, title, message))
-  );
+  const userIds = await notificationRepo.findUserIdsByRoles(roleNames);
+  await Promise.all(userIds.map((id) => createNotificationForUserId(id, type, title, message)));
 }
 
 async function getUserNotifications(email) {
-  const result = await query(
-    `
-      SELECT
-        n.id,
-        n.type,
-        n.title,
-        n.message,
-        n.is_read,
-        n.created_at,
-        COALESCE(r.name, 'User') AS role
-      FROM notifications n
-      JOIN users u ON u.id = n.user_id
-      LEFT JOIN user_roles ur ON ur.user_id = u.id
-      LEFT JOIN roles r ON r.id = ur.role_id
-      WHERE lower(u.email) = lower($1)
-      ORDER BY n.created_at DESC
-      LIMIT 20
-    `,
-    [email]
-  );
-
-  return result.rows.map(formatNotification);
+  const rows = await notificationRepo.findByUserEmail(email);
+  return rows.map(formatNotification);
 }
 
 async function markNotificationRead(email, notificationId) {
-  await query(
-    `
-      UPDATE notifications
-      SET is_read = true
-      WHERE id = $1
-        AND user_id = (
-          SELECT id FROM users WHERE lower(email) = lower($2)
-        )
-    `,
-    [notificationId, email]
-  );
+  await notificationRepo.markRead(notificationId, email);
 }
 
 async function markAllNotificationsRead(email) {
-  await query(
-    `
-      UPDATE notifications
-      SET is_read = true
-      WHERE user_id = (
-        SELECT id FROM users WHERE lower(email) = lower($1)
-      )
-        AND is_read = false
-    `,
-    [email]
-  );
+  await notificationRepo.markAllRead(email);
 }
 
 module.exports = {

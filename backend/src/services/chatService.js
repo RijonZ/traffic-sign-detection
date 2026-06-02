@@ -1,7 +1,5 @@
 const OpenAI = require("openai");
 
-require("../db/client");
-
 let openaiClient = null;
 
 function getOpenAiClient() {

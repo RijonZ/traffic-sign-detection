@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import "./styles/global.css";
+import { connectSocket, disconnectSocket } from "./socket/socket";
 import AdminDashboard from "./pages/AdminDashboard";
 import AuditLogs from "./pages/AuditLogs";
 import AllDetections from "./pages/AllDetections";
@@ -36,6 +37,12 @@ function App() {
   const [currentUser, setCurrentUser] = useState(() => {
     return JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
   });
+
+  useEffect(() => {
+    if (currentUser?.id) {
+      connectSocket(currentUser.id);
+    }
+  }, []);
 
   useEffect(() => {
     function handleHashChange() {
@@ -80,6 +87,7 @@ function App() {
 
       setCurrentUser(sessionUser);
       localStorage.setItem(SESSION_KEY, JSON.stringify(sessionUser));
+      connectSocket(sessionUser.id);
       navigate(getLandingPage(sessionUser.role));
       return { ok: true };
     } catch (error) {
@@ -104,6 +112,7 @@ function App() {
 
       setCurrentUser(sessionUser);
       localStorage.setItem(SESSION_KEY, JSON.stringify(sessionUser));
+      connectSocket(sessionUser.id);
       navigate(getLandingPage(sessionUser.role));
       return { ok: true };
     } catch (error) {
@@ -130,6 +139,7 @@ function App() {
 
     setCurrentUser(null);
     localStorage.removeItem(SESSION_KEY);
+    disconnectSocket();
     navigate("home");
   }
 
