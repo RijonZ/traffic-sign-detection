@@ -5,7 +5,8 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "node src/server.js"
+    "dev": "node src/server.js",
+    "migrate": "node -e \"const {query}=require('./src/db/client'),fs=require('fs'),path=require('path');query(fs.readFileSync(path.join(__dirname,'migrations',process.argv[1]),'utf8')).then(()=>{console.log('Migration complete.');process.exit(0)}).catch(e=>{console.error(e);process.exit(1)})\" --"
   },
   "dependencies": {
     "@upstash/redis": "^1.38.0",

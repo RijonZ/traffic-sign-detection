@@ -1,6 +1,7 @@
 const { getExportData } = require("../services/exportDataService");
 const { getManagerDashboardAnalytics } = require("../services/managerAnalyticsService");
 const { findUserByEmail } = require("../services/userService");
+const { hasPermission } = require("../services/permissionService");
 const { sendJson } = require("../utils/http");
 
 async function getManagerUser(request) {
@@ -9,29 +10,22 @@ async function getManagerUser(request) {
   return findUserByEmail(managerEmail);
 }
 
-async function ensureManager(request, response) {
+async function checkPermission(request, response, permissionName) {
   const user = await getManagerUser(request);
-  if (!user || (user.role !== "Manager" && user.role !== "Administrator")) {
-    sendJson(response, 403, { message: "Manager access required." });
+  if (!user || !(await hasPermission(user.role, permissionName))) {
+    sendJson(response, 403, { message: "Insufficient permissions." });
     return false;
   }
-
   return true;
 }
 
 async function getDashboardAnalytics(request, response) {
-  if (!(await ensureManager(request, response))) {
-    return;
-  }
-
+  if (!(await checkPermission(request, response, "view_analytics"))) return;
   sendJson(response, 200, await getManagerDashboardAnalytics());
 }
 
 async function getManagerExportData(request, response) {
-  if (!(await ensureManager(request, response))) {
-    return;
-  }
-
+  if (!(await checkPermission(request, response, "export_data"))) return;
   sendJson(response, 200, await getExportData());
 }
 

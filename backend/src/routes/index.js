@@ -47,10 +47,27 @@ const {
   getManagerExportData,
 } = require("../controllers/managerController");
 const { postFeedback, getFeedback, getMyFeedbacks } = require("../controllers/feedbackController");
+const { getPermissionsForRole } = require("../services/permissionService");
+const { findUserByEmail } = require("../services/userService");
 const { sendJson, sendOptions, notFound } = require("../utils/http");
 
 const routes = [
   { method: "GET", path: /^\/api\/health$/, handler: (_, response) => sendJson(response, 200, { ok: true }) },
+  {
+    method: "GET",
+    path: /^\/api\/permissions$/,
+    handler: async (request, response) => {
+      const url = new URL(request.url, `http://${request.headers.host}`);
+      const email = url.searchParams.get("email") || "";
+      const user = await findUserByEmail(email);
+      if (!user) {
+        sendJson(response, 404, { error: "User not found." });
+        return;
+      }
+      const permissions = await getPermissionsForRole(user.role);
+      sendJson(response, 200, { email: user.email, role: user.role, permissions });
+    },
+  },
   { method: "GET", path: /^\/api\/home$/, handler: getHome },
   { method: "POST", path: /^\/api\/auth\/login$/, handler: login },
   { method: "POST", path: /^\/api\/auth\/signup$/, handler: signup },
