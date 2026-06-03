@@ -1,6 +1,8 @@
 const { login, logout, signup, refresh } = require("../controllers/authController");
 const { sendMessage } = require("../controllers/chatController");
 const {
+  downloadAdminReport,
+  exportAdminReports,
   getAdminAuditLogs,
   getAdminDashboardSummary,
   getAdminDetections,
@@ -12,7 +14,6 @@ const {
   getAdminSettings,
   updateAdminSettings,
   getAdminFeedbacks,
-  downloadAdminReport,
 } = require("../controllers/adminController");
 const {
   createDetectSignRequest,
@@ -70,6 +71,8 @@ const routes = [
   { method: "GET", path: /^\/api\/admin\/audit-logs$/, handler: getAdminAuditLogs },
   { method: "GET", path: /^\/api\/admin\/dashboard$/, handler: getAdminDashboardSummary },
   { method: "GET", path: /^\/api\/admin\/detections$/, handler: getAdminDetections },
+  { method: "GET", path: /^\/api\/admin\/reports\/export$/, handler: exportAdminReports },
+  { method: "GET", path: /^\/api\/admin\/reports\/([^/]+)\/pdf$/, handler: downloadAdminReport },
   { method: "GET", path: /^\/api\/admin\/reports$/, handler: getAdminReports },
   { method: "GET", path: /^\/api\/admin\/users$/, handler: getAdminUsers },
   { method: "PUT", path: /^\/api\/admin\/users\/([^/]+)$/, handler: updateAdminUser },
@@ -77,7 +80,6 @@ const routes = [
   { method: "GET", path: /^\/api\/admin\/settings$/, handler: getAdminSettings },
   { method: "PUT", path: /^\/api\/admin\/settings$/, handler: updateAdminSettings },
   { method: "GET", path: /^\/api\/admin\/feedbacks$/, handler: getAdminFeedbacks },
-  { method: "GET", path: /^\/api\/admin\/reports\/([^/]+)\/pdf$/, handler: downloadAdminReport },
   { method: "GET", path: /^\/api\/manager\/dashboard-analytics$/, handler: getDashboardAnalytics },
   { method: "GET", path: /^\/api\/manager\/export-data$/, handler: getManagerExportData },
   { method: "PUT", path: /^\/api\/users\/([^/]+)\/profile$/, handler: updateUserProfile },

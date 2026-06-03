@@ -67,23 +67,50 @@ function Reports({ currentUser, onLogout, onNavigate }) {
   const fallbackReports = useMemo(readReports, []);
   const [reports, setReports] = useState(fallbackReports);
   const [selectedReport, setSelectedReport] = useState(null);
+  const [filters, setFilters] = useState({
+    dateFrom: "",
+    dateTo: "",
+    status: "All",
+    user: "",
+  });
+  const [statusMessage, setStatusMessage] = useState("");
 
   useEffect(() => {
     if (!currentUser || currentUser.role !== "Administrator") {
       return;
     }
 
-    fetch(`${API_BASE_URL}/admin/reports?adminEmail=${encodeURIComponent(currentUser.email)}`)
+    fetch(`${API_BASE_URL}/admin/reports?${buildReportQuery()}`)
       .then((response) => (response.ok ? response.json() : null))
       .then((data) => {
-        if (data?.reports?.length) {
-          setReports(data.reports);
-        }
+        setReports(data?.reports || []);
+        setStatusMessage("");
       })
       .catch(() => {
         setReports(fallbackReports);
+        setStatusMessage("Backend reports are not available, showing saved demo reports.");
       });
-  }, [currentUser, fallbackReports]);
+  }, [currentUser, fallbackReports, filters]);
+
+  function buildReportQuery() {
+    const params = new URLSearchParams({ adminEmail: currentUser.email });
+
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value && value !== "All") {
+        params.set(key, value);
+      }
+    });
+
+    return params.toString();
+  }
+
+  function updateFilter(key, value) {
+    setFilters((currentFilters) => ({ ...currentFilters, [key]: value }));
+  }
+
+  function resetFilters() {
+    setFilters({ dateFrom: "", dateTo: "", status: "All", user: "" });
+  }
 
   const { page, setPage, totalPages, paginatedItems: paginatedReports, pageSize } = usePagination(reports);
   const completed = reports.filter((report) => report.status === "Completed").length;
@@ -96,9 +123,7 @@ function Reports({ currentUser, onLogout, onNavigate }) {
     : 0;
 
   function downloadReport(report) {
-    fetch(
-      `${API_BASE_URL}/admin/reports/${encodeURIComponent(report.id)}/pdf?adminEmail=${encodeURIComponent(currentUser.email)}`
-    )
+    fetch(`${API_BASE_URL}/admin/reports/${encodeURIComponent(report.id)}/pdf?${buildReportQuery()}`)
       .then((response) => (response.ok ? response.blob() : Promise.reject()))
       .then((blob) => {
         const reportUrl = URL.createObjectURL(blob);
@@ -109,11 +134,26 @@ function Reports({ currentUser, onLogout, onNavigate }) {
         URL.revokeObjectURL(reportUrl);
       })
       .catch(() => {
+        setStatusMessage("Backend PDF is not available, downloading a local report instead.");
         downloadReportPdf(
           { ...report, user: report.requestedBy },
           `${report.id.toLowerCase()}-traffic-sign-report.pdf`
         );
       });
+  }
+
+  function exportReports() {
+    fetch(`${API_BASE_URL}/admin/reports/export?${buildReportQuery()}`)
+      .then((response) => (response.ok ? response.blob() : Promise.reject()))
+      .then((blob) => {
+        const exportUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = exportUrl;
+        link.download = "traffic-sign-admin-reports.csv";
+        link.click();
+        URL.revokeObjectURL(exportUrl);
+      })
+      .catch(() => setStatusMessage("Backend export is not available."));
   }
 
   if (!currentUser) {
@@ -184,6 +224,38 @@ function Reports({ currentUser, onLogout, onNavigate }) {
           </div>
         </section>
 
+        <section className="reports-filter-panel">
+          <input
+            placeholder="Filter by user or email"
+            value={filters.user}
+            onChange={(event) => updateFilter("user", event.target.value)}
+          />
+          <select value={filters.status} onChange={(event) => updateFilter("status", event.target.value)}>
+            <option value="All">All statuses</option>
+            <option value="Completed">Completed</option>
+            <option value="Rejected">Rejected</option>
+            <option value="Processing">Processing</option>
+          </select>
+          <input
+            type="date"
+            value={filters.dateFrom}
+            onChange={(event) => updateFilter("dateFrom", event.target.value)}
+          />
+          <input
+            type="date"
+            value={filters.dateTo}
+            onChange={(event) => updateFilter("dateTo", event.target.value)}
+          />
+          <button className="secondary-btn" type="button" onClick={resetFilters}>
+            Reset
+          </button>
+          <button className="primary-btn" type="button" onClick={exportReports}>
+            Export CSV
+          </button>
+        </section>
+
+        {statusMessage && <p className="report-status-message">{statusMessage}</p>}
+
         <section className="history-table">
           <div className="admin-report-row admin-report-head">
             <p>Report ID</p>
@@ -206,7 +278,20 @@ function Reports({ currentUser, onLogout, onNavigate }) {
               </button>
             </div>
           ))}
-          <Pagination page={page} totalPages={totalPages} total={reports.length} pageSize={pageSize} onPage={setPage} />
+
+          {!reports.length && (
+            <div className="admin-report-row">
+              <p>No reports</p>
+              <p>-</p>
+              <p>-</p>
+              <p>-</p>
+              <p><span className="status-pill">Empty</span></p>
+              <p>-</p>
+            </div>
+          )}
+          {reports.length > 0 && (
+            <Pagination page={page} totalPages={totalPages} total={reports.length} pageSize={pageSize} onPage={setPage} />
+          )}
         </section>
 
         {selectedReport && (
@@ -214,7 +299,7 @@ function Reports({ currentUser, onLogout, onNavigate }) {
             <div className="report-modal" onClick={(e) => e.stopPropagation()}>
               <div className="report-modal-header">
                 <span className="eyebrow">Report detail</span>
-                <button className="report-modal-close" onClick={() => setSelectedReport(null)}>✕</button>
+                <button className="report-modal-close" onClick={() => setSelectedReport(null)}>x</button>
               </div>
               <h2>{selectedReport.id}</h2>
               <p><strong>Image:</strong> {selectedReport.fileName}</p>

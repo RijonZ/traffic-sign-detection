@@ -2,11 +2,11 @@ const { getAuditLogs } = require("../services/auditLogService");
 const { getAdminDashboard } = require("../services/adminDashboardService");
 const { getAllDetections } = require("../services/detectionService");
 const { getModelMonitoringSummary } = require("../services/modelMonitoringService");
-const { getAllReports, getAdminReportPdf } = require("../services/reportService");
+const { exportReportsCsv, getAllReports, getAdminReportPdf } = require("../services/reportService");
 const { findUserByEmail, getAllUsers, getUsersSummaryFromList, updateUser, deleteUser } = require("../services/userService");
 const { getSettings, updateSettings } = require("../services/settingsService");
 const { getAllFeedbacks } = require("../services/feedbackService");
-const { sendJson, sendPdf, readBody } = require("../utils/http");
+const { sendCsv, sendJson, readBody, sendPdf } = require("../utils/http");
 
 async function getAdminUser(request) {
   const url = new URL(request.url, `http://${request.headers.host}`);
@@ -37,7 +37,43 @@ async function getAdminReports(request, response) {
     return;
   }
 
-  sendJson(response, 200, await getAllReports());
+  sendJson(response, 200, await getAllReports(getReportFilters(request)));
+}
+
+function getReportFilters(request) {
+  const url = new URL(request.url, `http://${request.headers.host}`);
+
+  return {
+    dateFrom: url.searchParams.get("dateFrom") || "",
+    dateTo: url.searchParams.get("dateTo") || "",
+    status: url.searchParams.get("status") || "",
+    user: url.searchParams.get("user") || "",
+  };
+}
+
+async function downloadAdminReport(request, response, params) {
+  if (!(await ensureAdministrator(request, response))) {
+    return;
+  }
+
+  const [reportId] = params;
+  const reportPdf = await getAdminReportPdf(reportId, getReportFilters(request));
+
+  if (!reportPdf) {
+    sendJson(response, 404, { message: "Report not found." });
+    return;
+  }
+
+  sendPdf(response, reportPdf.fileName, reportPdf.pdf);
+}
+
+async function exportAdminReports(request, response) {
+  if (!(await ensureAdministrator(request, response))) {
+    return;
+  }
+
+  const exportFile = await exportReportsCsv(getReportFilters(request));
+  sendCsv(response, exportFile.fileName, exportFile.csv);
 }
 
 async function getAdminDetections(request, response) {
@@ -126,18 +162,9 @@ async function getAdminFeedbacks(request, response) {
   sendJson(response, 200, { feedbacks: await getAllFeedbacks() });
 }
 
-async function downloadAdminReport(request, response, params) {
-  if (!(await ensureAdministrator(request, response))) return;
-  const [reportId] = params;
-  const reportPdf = await getAdminReportPdf(reportId);
-  if (!reportPdf) {
-    sendJson(response, 404, { message: "Report not found." });
-    return;
-  }
-  sendPdf(response, reportPdf.fileName, reportPdf.pdf);
-}
-
 module.exports = {
+  downloadAdminReport,
+  exportAdminReports,
   getAdminAuditLogs,
   getAdminDashboardSummary,
   getAdminDetections,
@@ -149,5 +176,4 @@ module.exports = {
   getAdminSettings,
   updateAdminSettings,
   getAdminFeedbacks,
-  downloadAdminReport,
 };

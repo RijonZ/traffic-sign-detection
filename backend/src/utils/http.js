@@ -22,6 +22,20 @@ function sendPdf(response, fileName, content) {
   response.end(body);
 }
 
+function sendCsv(response, fileName, content) {
+  const body = Buffer.from(content);
+
+  response.writeHead(200, {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+    "Content-Disposition": `attachment; filename="${fileName}"`,
+    "Content-Length": body.length,
+    "Content-Type": "text/csv",
+  });
+  response.end(body);
+}
+
 function sendOptions(response) {
   sendJson(response, 204, {});
 }
@@ -48,4 +62,4 @@ function readBody(request) {
   });
 }
 
-module.exports = { sendJson, sendOptions, notFound, readBody, sendPdf };
+module.exports = { sendJson, sendOptions, notFound, readBody, sendCsv, sendPdf };

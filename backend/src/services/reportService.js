@@ -1,5 +1,6 @@
 const PDFDocument = require("pdfkit");
 const { getUserDetections } = require("./detectionService");
+const { query } = require("../db/client");
 const homeRepo = require("../repositories/homeRepository");
 
 function formatReport(item) {
@@ -250,6 +251,111 @@ async function getUserReportPdf(email, reportId) {
   };
 }
 
+function reportMatchesFilters(report, filters = {}) {
+  const status = String(filters.status || "").trim();
+  const user = String(filters.user || "").trim().toLowerCase();
+  const dateFrom = filters.dateFrom ? new Date(filters.dateFrom) : null;
+  const dateTo = filters.dateTo ? new Date(filters.dateTo) : null;
+  const reportDate = report.createdAt ? new Date(report.createdAt) : null;
+
+  if (status && status !== "All" && report.status !== status) {
+    return false;
+  }
+
+  if (user) {
+    const haystack = `${report.requestedBy || ""} ${report.userEmail || ""}`.toLowerCase();
+    if (!haystack.includes(user)) {
+      return false;
+    }
+  }
+
+  if (dateFrom && reportDate && reportDate < dateFrom) {
+    return false;
+  }
+
+  if (dateTo && reportDate) {
+    const endOfDay = new Date(dateTo);
+    endOfDay.setHours(23, 59, 59, 999);
+    if (reportDate > endOfDay) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+async function getFilteredReports(filters = {}) {
+  const { reports } = await getAllReports();
+  return reports.filter((report) => reportMatchesFilters(report, filters));
+}
+
+async function saveReportMetadata(report) {
+  const result = await query(
+    `
+      SELECT id
+      FROM detection_results
+      WHERE request_id = $1
+      ORDER BY detected_at DESC
+      LIMIT 1
+    `,
+    [report.detectionId]
+  );
+  const detectionResult = result.rows[0];
+
+  if (!detectionResult) {
+    return;
+  }
+
+  const filePath = `backend-generated/${report.id.toLowerCase()}-traffic-sign-report.pdf`;
+  const existing = await query(
+    "SELECT id FROM reports WHERE detection_result_id = $1 AND file_path = $2 LIMIT 1",
+    [detectionResult.id, filePath]
+  );
+
+  if (existing.rows[0]) {
+    return;
+  }
+
+  await query(
+    `
+      INSERT INTO reports (detection_result_id, report_type, file_path)
+      VALUES ($1, $2, $3)
+    `,
+    [detectionResult.id, "pdf", filePath]
+  );
+}
+
+async function getReportPdfById(reportId, filters = {}) {
+  const reports = await getFilteredReports(filters);
+  const report = reports.find((item) => item.id === reportId);
+
+  if (!report) {
+    return null;
+  }
+
+  await saveReportMetadata(report);
+
+  return {
+    fileName: `${report.id.toLowerCase()}-traffic-sign-report.pdf`,
+    pdf: buildReportPdf(report),
+  };
+}
+
+function toCsvValue(value) {
+  return `"${String(value ?? "").replaceAll('"', '""')}"`;
+}
+
+async function exportReportsCsv(filters = {}) {
+  const reports = await getFilteredReports(filters);
+  const columns = ["id", "fileName", "requestedBy", "userEmail", "sign", "category", "confidence", "status", "createdAt"];
+  const rows = reports.map((report) => columns.map((column) => toCsvValue(report[column])).join(","));
+
+  return {
+    fileName: "traffic-sign-admin-reports.csv",
+    csv: [columns.join(","), ...rows].join("\n"),
+  };
+}
+
 function getReportsSummary(reports) {
   const completed = reports.filter((report) => report.status === "Completed").length;
   const rejected = reports.filter((report) => report.status === "Rejected").length;
@@ -268,7 +374,7 @@ function getReportsSummary(reports) {
   };
 }
 
-async function getAllReports() {
+async function getAllReports(filters = {}) {
   const emails = await homeRepo.findAllUserEmails();
   const reportGroups = await Promise.all(
     emails.map(async (email) => {
@@ -277,21 +383,23 @@ async function getAllReports() {
     })
   );
   const reports = reportGroups.flat();
+  const filteredReports = reports.filter((report) => reportMatchesFilters(report, filters));
 
   return {
-    reports,
-    summary: getReportsSummary(reports),
+    reports: filteredReports,
+    summary: getReportsSummary(filteredReports),
   };
 }
 
-async function getAdminReportPdf(reportId) {
-  const { reports } = await getAllReports();
-  const report = reports.find((item) => item.id === reportId);
-  if (!report) return null;
-  return {
-    fileName: `${report.id.toLowerCase()}-traffic-sign-report.pdf`,
-    pdf: await buildReportPdf(report, reports),
-  };
+async function getAdminReportPdf(reportId, filters = {}) {
+  return getReportPdfById(reportId, filters);
 }
 
-module.exports = { getAllReports, getAdminReportPdf, getUserReportPdf, getUserReports };
+module.exports = {
+  exportReportsCsv,
+  getAllReports,
+  getAdminReportPdf,
+  getReportPdfById,
+  getUserReportPdf,
+  getUserReports,
+};
