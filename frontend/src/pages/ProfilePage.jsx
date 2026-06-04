@@ -1,92 +1,159 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Navbar from "../shared/Navbar";
-import "../styles/auth.css";
-import "../styles/dashboard.css";
+import "../styles/profile.css";
 
 const API_BASE_URL = "http://localhost:5000/api";
 
+function getInitials(name = "") {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join("");
+}
+
+function formatDate(iso) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function timeUntil(iso) {
+  if (!iso) return "";
+  const ms = new Date(iso).getTime() - Date.now();
+  const days = Math.ceil(ms / 864e5);
+  if (days > 1) return `Available in ${days} days`;
+  const hours = Math.ceil(ms / 36e5);
+  return `Available in ${hours} hour${hours !== 1 ? "s" : ""}`;
+}
+
+function roleBadgeClass(role) {
+  if (role === "Administrator") return "profile-badge profile-badge--admin";
+  if (role === "Manager") return "profile-badge profile-badge--manager";
+  return "profile-badge profile-badge--user";
+}
+
 function ProfilePage({ currentUser, onLogout, onNavigate, onUpdateProfile }) {
+  const [meta, setMeta] = useState(null);
+
   const [name, setName] = useState(currentUser?.name || "");
+  const [nameSaving, setNameSaving] = useState(false);
+  const [nameMsg, setNameMsg] = useState(null);
+
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [successMessage, setSuccessMessage] = useState(null);
-  const [errorMessage, setErrorMessage] = useState(null);
+  const [passSaving, setPassSaving] = useState(false);
+  const [passMsg, setPassMsg] = useState(null);
+
+  useEffect(() => {
+    if (!currentUser?.email) return;
+    fetch(`${API_BASE_URL}/users/${encodeURIComponent(currentUser.email)}/profile`)
+      .then((r) => r.json())
+      .then(setMeta)
+      .catch(() => {});
+  }, [currentUser?.email]);
 
   if (!currentUser) {
     return (
       <div className="home">
         <Navbar onNavigate={onNavigate} />
         <main className="page-shell">
-          <section className="auth-card">
-            <h1>Sign in required</h1>
-            <p>You need to be signed in to view your profile.</p>
-            <button className="primary-btn" onClick={() => onNavigate("login")}>
-              Go to login
-            </button>
-          </section>
+          <p style={{ padding: "32px" }}>Sign in required.</p>
         </main>
       </div>
     );
   }
 
-  async function handleSave(e) {
-    e.preventDefault();
-    setErrorMessage(null);
-    setSuccessMessage(null);
-
-    if (password && password !== confirmPassword) {
-      setErrorMessage("Passwords do not match.");
-      return;
-    }
-
-    if (!name.trim() && !password) {
-      setErrorMessage("Enter a new name or password to save changes.");
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const body = {};
-      if (name.trim() && name.trim() !== currentUser.name) body.name = name.trim();
-      if (password) body.password = password;
-
-      if (!Object.keys(body).length) {
-        setErrorMessage("No changes detected.");
-        setSaving(false);
-        return;
-      }
-
-      const res = await fetch(
-        `${API_BASE_URL}/users/${encodeURIComponent(currentUser.email)}/profile`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        }
-      );
-
-      const data = await res.json();
-      if (!res.ok) {
-        setErrorMessage(data.message || "Update failed.");
-        return;
-      }
-
-      onUpdateProfile(data.user);
-      setPassword("");
-      setConfirmPassword("");
-      setSuccessMessage("Profile updated successfully.");
-    } catch {
-      setErrorMessage("Could not connect to server.");
-    } finally {
-      setSaving(false);
-    }
-  }
+  const nameLocked = meta?.nameLockedUntil ? new Date(meta.nameLockedUntil) > new Date() : false;
+  const passLocked = meta?.passwordLockedUntil ? new Date(meta.passwordLockedUntil) > new Date() : false;
 
   function getLandingPage(role) {
     if (role === "Administrator") return "admin-dashboard";
     if (role === "Manager") return "dashboard-analytics";
     return "dashboard";
+  }
+
+  async function handleNameSave(e) {
+    e.preventDefault();
+    if (!name.trim() || name.trim() === currentUser.name) {
+      setNameMsg({ type: "error", text: "Enter a different display name to save." });
+      return;
+    }
+    setNameMsg(null);
+    setNameSaving(true);
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/users/${encodeURIComponent(currentUser.email)}/profile`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: name.trim() }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        setNameMsg({ type: "error", text: data.message });
+        if (data.lockedUntil) {
+          setMeta((m) => ({ ...m, nameLockedUntil: data.lockedUntil }));
+        }
+      } else {
+        onUpdateProfile(data.user);
+        setMeta((m) => ({ ...m, nameLockedUntil: new Date(Date.now() + 90 * 864e5).toISOString() }));
+        setNameMsg({ type: "success", text: "Display name updated." });
+      }
+    } catch {
+      setNameMsg({ type: "error", text: "Could not connect to server." });
+    } finally {
+      setNameSaving(false);
+    }
+  }
+
+  async function handlePasswordSave(e) {
+    e.preventDefault();
+    if (!password) {
+      setPassMsg({ type: "error", text: "Enter a new password." });
+      return;
+    }
+    if (password !== confirmPassword) {
+      setPassMsg({ type: "error", text: "Passwords do not match." });
+      return;
+    }
+    if (password.length < 6) {
+      setPassMsg({ type: "error", text: "Password must be at least 6 characters." });
+      return;
+    }
+    setPassMsg(null);
+    setPassSaving(true);
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/users/${encodeURIComponent(currentUser.email)}/profile`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        setPassMsg({ type: "error", text: data.message });
+        if (data.lockedUntil) {
+          setMeta((m) => ({ ...m, passwordLockedUntil: data.lockedUntil }));
+        }
+      } else {
+        setPassword("");
+        setConfirmPassword("");
+        setMeta((m) => ({ ...m, passwordLockedUntil: new Date(Date.now() + 30 * 864e5).toISOString() }));
+        setPassMsg({ type: "success", text: "Password changed successfully." });
+      }
+    } catch {
+      setPassMsg({ type: "error", text: "Could not connect to server." });
+    } finally {
+      setPassSaving(false);
+    }
   }
 
   return (
@@ -98,7 +165,7 @@ function ProfilePage({ currentUser, onLogout, onNavigate, onUpdateProfile }) {
           <div>
             <span className="eyebrow">Account</span>
             <h1>My Profile</h1>
-            <p>Update your display name or change your password.</p>
+            <p>Manage your account information and security settings.</p>
           </div>
           <button
             className="secondary-btn"
@@ -108,75 +175,146 @@ function ProfilePage({ currentUser, onLogout, onNavigate, onUpdateProfile }) {
           </button>
         </section>
 
-        <section className="auth-card" style={{ maxWidth: "480px", marginTop: "32px" }}>
-          <div style={{ marginBottom: "24px" }}>
-            <p className="auth-label">Email</p>
-            <p style={{ marginTop: "4px", fontWeight: 500 }}>{currentUser.email}</p>
+        <div className="profile-layout">
+
+          {/* ── Left: identity card ── */}
+          <aside className="profile-identity-card">
+            <div className="profile-avatar">
+              {getInitials(currentUser.name)}
+            </div>
+            <p className="profile-identity-name">{currentUser.name}</p>
+            <span className={roleBadgeClass(currentUser.role)}>{currentUser.role}</span>
+
+            <dl className="profile-meta-list">
+              <dt>Email</dt>
+              <dd>{currentUser.email}</dd>
+
+              <dt>Member since</dt>
+              <dd>{formatDate(meta?.createdAt)}</dd>
+
+              <dt>Name last changed</dt>
+              <dd>
+                {meta?.nameLockedUntil
+                  ? formatDate(new Date(new Date(meta.nameLockedUntil).getTime() - 90 * 864e5).toISOString())
+                  : "Never"}
+              </dd>
+
+              <dt>Password last changed</dt>
+              <dd>
+                {meta?.passwordLockedUntil
+                  ? formatDate(new Date(new Date(meta.passwordLockedUntil).getTime() - 30 * 864e5).toISOString())
+                  : "Never"}
+              </dd>
+            </dl>
+          </aside>
+
+          {/* ── Right: forms ── */}
+          <div className="profile-forms">
+
+            {/* Display name */}
+            <div className="profile-section">
+              <div className="profile-section-header">
+                <div>
+                  <h2>Display Name</h2>
+                  <p>This name is visible throughout the application.</p>
+                </div>
+                {nameLocked && (
+                  <span className="profile-lock-badge">
+                    Locked · {timeUntil(meta.nameLockedUntil)}
+                  </span>
+                )}
+              </div>
+
+              {nameLocked ? (
+                <div className="profile-locked-notice">
+                  Display name can only be changed once every 3 months.
+                  Next change allowed on <strong>{formatDate(meta.nameLockedUntil)}</strong>.
+                </div>
+              ) : (
+                <form className="profile-form" onSubmit={handleNameSave}>
+                  <label>
+                    New display name
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      disabled={nameSaving}
+                      placeholder={currentUser.name}
+                    />
+                  </label>
+                  {nameMsg && (
+                    <p className={nameMsg.type === "error" ? "profile-msg profile-msg--error" : "profile-msg profile-msg--success"}>
+                      {nameMsg.text}
+                    </p>
+                  )}
+                  <div className="profile-form-footer">
+                    <button className="primary-btn" type="submit" disabled={nameSaving}>
+                      {nameSaving ? "Saving…" : "Save name"}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+
+            {/* Password */}
+            <div className="profile-section">
+              <div className="profile-section-header">
+                <div>
+                  <h2>Password</h2>
+                  <p>Use a strong password you don't use elsewhere.</p>
+                </div>
+                {passLocked && (
+                  <span className="profile-lock-badge">
+                    Locked · {timeUntil(meta.passwordLockedUntil)}
+                  </span>
+                )}
+              </div>
+
+              {passLocked ? (
+                <div className="profile-locked-notice">
+                  Password can only be changed once per month.
+                  Next change allowed on <strong>{formatDate(meta.passwordLockedUntil)}</strong>.
+                </div>
+              ) : (
+                <form className="profile-form" onSubmit={handlePasswordSave}>
+                  <label>
+                    New password
+                    <input
+                      type="password"
+                      minLength="6"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      disabled={passSaving}
+                      placeholder="Minimum 6 characters"
+                    />
+                  </label>
+                  <label>
+                    Confirm new password
+                    <input
+                      type="password"
+                      minLength="6"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      disabled={passSaving}
+                      placeholder="Repeat new password"
+                    />
+                  </label>
+                  {passMsg && (
+                    <p className={passMsg.type === "error" ? "profile-msg profile-msg--error" : "profile-msg profile-msg--success"}>
+                      {passMsg.text}
+                    </p>
+                  )}
+                  <div className="profile-form-footer">
+                    <button className="primary-btn" type="submit" disabled={passSaving}>
+                      {passSaving ? "Saving…" : "Change password"}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+
           </div>
-
-          <div style={{ marginBottom: "24px" }}>
-            <p className="auth-label">Role</p>
-            <p style={{ marginTop: "4px", fontWeight: 500 }}>{currentUser.role}</p>
-          </div>
-
-          <form onSubmit={handleSave}>
-            <div className="auth-field">
-              <label className="auth-label" htmlFor="profile-name">
-                Display Name
-              </label>
-              <input
-                id="profile-name"
-                className="auth-input"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Your full name"
-                disabled={saving}
-              />
-            </div>
-
-            <div className="auth-field">
-              <label className="auth-label" htmlFor="profile-password">
-                New Password
-              </label>
-              <input
-                id="profile-password"
-                className="auth-input"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Leave blank to keep current"
-                disabled={saving}
-              />
-            </div>
-
-            <div className="auth-field">
-              <label className="auth-label" htmlFor="profile-confirm">
-                Confirm New Password
-              </label>
-              <input
-                id="profile-confirm"
-                className="auth-input"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Repeat new password"
-                disabled={saving}
-              />
-            </div>
-
-            {errorMessage && <p className="auth-error">{errorMessage}</p>}
-            {successMessage && (
-              <p className="auth-error" style={{ color: "var(--success, #22c55e)" }}>
-                {successMessage}
-              </p>
-            )}
-
-            <button className="primary-btn" type="submit" disabled={saving} style={{ width: "100%", marginTop: "8px" }}>
-              {saving ? "Saving…" : "Save Changes"}
-            </button>
-          </form>
-        </section>
+        </div>
       </main>
     </div>
   );

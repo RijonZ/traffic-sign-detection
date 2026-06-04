@@ -72,10 +72,25 @@ async function markAllNotificationsRead(email) {
   await notificationRepo.markAllRead(email);
 }
 
+async function deleteNotification(email, notificationId) {
+  await notificationRepo.deleteOne(notificationId, email);
+}
+
+async function deleteReadNotifications(email) {
+  await notificationRepo.deleteAllRead(email);
+}
+
+async function deleteAllNotifications(email) {
+  await notificationRepo.deleteAll(email);
+}
+
 module.exports = {
   createNotificationForEmail,
   getUserNotifications,
   markAllNotificationsRead,
   markNotificationRead,
   notifyRoles,
+  deleteNotification,
+  deleteReadNotifications,
+  deleteAllNotifications,
 };

@@ -1,5 +1,15 @@
-const { updateProfile } = require("../services/userService");
+const { updateProfile, getProfileMeta } = require("../services/userService");
 const { sendJson, readBody } = require("../utils/http");
+
+async function getUserProfile(request, response, params) {
+  const email = decodeURIComponent(params[0]);
+  const meta = await getProfileMeta(email);
+  if (!meta) {
+    sendJson(response, 404, { message: "User not found." });
+    return;
+  }
+  sendJson(response, 200, meta);
+}
 
 async function updateUserProfile(request, response, params) {
   const email = decodeURIComponent(params[0]);
@@ -17,8 +27,11 @@ async function updateUserProfile(request, response, params) {
 
     const result = await updateProfile(email, updates);
     if (!result.ok) {
-      const status = result.cooldownHoursLeft ? 429 : 404;
-      sendJson(response, status, { message: result.message });
+      sendJson(response, 429, {
+        message: result.message,
+        field: result.field,
+        lockedUntil: result.lockedUntil,
+      });
       return;
     }
 
@@ -28,4 +41,4 @@ async function updateUserProfile(request, response, params) {
   }
 }
 
-module.exports = { updateUserProfile };
+module.exports = { getUserProfile, updateUserProfile };

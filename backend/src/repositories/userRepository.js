@@ -199,9 +199,17 @@ async function updateName(userId, firstName, lastName) {
 
 async function updatePassword(userId, passwordHash) {
   await query(
-    `UPDATE users SET password_hash = $1, updated_at = now() WHERE id = $2`,
+    `UPDATE users SET password_hash = $1, password_changed_at = now(), updated_at = now() WHERE id = $2`,
     [passwordHash, userId]
   );
+}
+
+async function getProfileCooldowns(userId) {
+  const result = await query(
+    `SELECT name_changed_at, password_changed_at, created_at FROM users WHERE id = $1`,
+    [userId]
+  );
+  return result.rows[0] || null;
 }
 
 module.exports = {
@@ -222,4 +230,5 @@ module.exports = {
   getNameChangedAt,
   updateName,
   updatePassword,
+  getProfileCooldowns,
 };

@@ -79,4 +79,30 @@ async function markAllRead(email) {
   );
 }
 
-module.exports = { insert, findUserIdsByRoles, findByUserEmail, markRead, markAllRead };
+async function deleteOne(notificationId, email) {
+  await query(
+    `DELETE FROM notifications
+     WHERE id = $1
+       AND user_id = (SELECT id FROM users WHERE lower(email) = lower($2))`,
+    [notificationId, email]
+  );
+}
+
+async function deleteAllRead(email) {
+  await query(
+    `DELETE FROM notifications
+     WHERE user_id = (SELECT id FROM users WHERE lower(email) = lower($1))
+       AND is_read = true`,
+    [email]
+  );
+}
+
+async function deleteAll(email) {
+  await query(
+    `DELETE FROM notifications
+     WHERE user_id = (SELECT id FROM users WHERE lower(email) = lower($1))`,
+    [email]
+  );
+}
+
+module.exports = { insert, findUserIdsByRoles, findByUserEmail, markRead, markAllRead, deleteOne, deleteAllRead, deleteAll };

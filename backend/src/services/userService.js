@@ -227,31 +227,64 @@ async function deleteUser(userId, actor) {
   return { ok: true };
 }
 
-const NAME_CHANGE_COOLDOWN_HOURS = 24;
+const NAME_COOLDOWN_DAYS = 90;    // 3 months
+const PASSWORD_COOLDOWN_DAYS = 30; // 1 month
+
+function cooldownUntil(lastChanged, days) {
+  if (!lastChanged) return null;
+  const until = new Date(new Date(lastChanged).getTime() + days * 864e5);
+  return until > new Date() ? until.toISOString() : null;
+}
+
+function daysLeftLabel(untilIso) {
+  const ms = new Date(untilIso).getTime() - Date.now();
+  const days = Math.ceil(ms / 864e5);
+  if (days > 1) return `${days} days`;
+  const hours = Math.ceil(ms / 36e5);
+  return `${hours} hour${hours !== 1 ? "s" : ""}`;
+}
+
+async function getProfileMeta(email) {
+  const user = await findUserByEmail(email);
+  if (!user) return null;
+  const meta = await userRepo.getProfileCooldowns(user.id);
+  return {
+    createdAt: meta?.created_at || null,
+    nameLockedUntil: cooldownUntil(meta?.name_changed_at, NAME_COOLDOWN_DAYS),
+    passwordLockedUntil: cooldownUntil(meta?.password_changed_at, PASSWORD_COOLDOWN_DAYS),
+  };
+}
 
 async function updateProfile(email, { name, password }) {
   const user = await findUserByEmail(email);
   if (!user) return { ok: false, message: "User not found." };
 
   if (name !== undefined) {
-    const lastChanged = await userRepo.getNameChangedAt(user.id);
-    if (lastChanged) {
-      const hoursSince = (Date.now() - new Date(lastChanged).getTime()) / 36e5;
-      if (hoursSince < NAME_CHANGE_COOLDOWN_HOURS) {
-        const hoursLeft = Math.ceil(NAME_CHANGE_COOLDOWN_HOURS - hoursSince);
-        return {
-          ok: false,
-          message: `You can only change your name once every 24 hours. Try again in ${hoursLeft} hour${hoursLeft !== 1 ? "s" : ""}.`,
-          cooldownHoursLeft: hoursLeft,
-        };
-      }
+    const meta = await userRepo.getProfileCooldowns(user.id);
+    const lockedUntil = cooldownUntil(meta?.name_changed_at, NAME_COOLDOWN_DAYS);
+    if (lockedUntil) {
+      return {
+        ok: false,
+        field: "name",
+        lockedUntil,
+        message: `You can only change your display name once every 3 months. Try again in ${daysLeftLabel(lockedUntil)}.`,
+      };
     }
-
     const { firstName, lastName } = splitName(name);
     await userRepo.updateName(user.id, firstName, lastName);
   }
 
   if (password !== undefined) {
+    const meta = await userRepo.getProfileCooldowns(user.id);
+    const lockedUntil = cooldownUntil(meta?.password_changed_at, PASSWORD_COOLDOWN_DAYS);
+    if (lockedUntil) {
+      return {
+        ok: false,
+        field: "password",
+        lockedUntil,
+        message: `You can only change your password once every month. Try again in ${daysLeftLabel(lockedUntil)}.`,
+      };
+    }
     await userRepo.updatePassword(user.id, await bcrypt.hash(password, BCRYPT_ROUNDS));
   }
 
@@ -320,6 +353,7 @@ module.exports = {
   getUsersSummaryFromList,
   updateUser,
   updateProfile,
+  getProfileMeta,
   deleteUser,
   revokeLoginSession,
   refreshSession,

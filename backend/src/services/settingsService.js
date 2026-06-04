@@ -45,17 +45,44 @@ async function getSettings() {
   return parseSettings(rows);
 }
 
-async function updateSettings(updates) {
-  const allowedKeys = Object.keys(DEFAULT_SETTINGS);
+function validateSettings(updates) {
+  const errors = [];
 
+  if ("maxUploadSize" in updates) {
+    const v = Number(updates.maxUploadSize);
+    if (!Number.isFinite(v) || v < 1 || v > 100)
+      errors.push("Maximum upload size must be between 1 and 100 MB.");
+  }
+  if ("confidenceThreshold" in updates) {
+    const v = Number(updates.confidenceThreshold);
+    if (!Number.isFinite(v) || v < 0 || v > 100)
+      errors.push("Confidence threshold must be between 0 and 100.");
+  }
+  if ("retentionDays" in updates) {
+    const v = Number(updates.retentionDays);
+    if (!Number.isInteger(v) || v < 1 || v > 3650)
+      errors.push("Retention days must be a whole number between 1 and 3650.");
+  }
+  if ("acceptedFormats" in updates) {
+    const v = String(updates.acceptedFormats || "").trim();
+    if (!v) errors.push("Accepted formats cannot be empty.");
+  }
+
+  return errors;
+}
+
+async function updateSettings(updates) {
+  const errors = validateSettings(updates);
+  if (errors.length) return { ok: false, errors };
+
+  const allowedKeys = Object.keys(DEFAULT_SETTINGS);
   for (const [key, value] of Object.entries(updates)) {
     if (!allowedKeys.includes(key)) continue;
-
-    const strValue = BOOLEAN_KEYS.includes(key) ? String(Boolean(value)) : String(value);
+    const strValue = BOOLEAN_KEYS.includes(key) ? String(Boolean(value)) : String(value).trim();
     await settingsRepo.upsert(key, strValue, SETTING_DESCRIPTIONS[key] || "");
   }
 
-  return getSettings();
+  return { ok: true, settings: await getSettings() };
 }
 
 module.exports = { getSettings, updateSettings };

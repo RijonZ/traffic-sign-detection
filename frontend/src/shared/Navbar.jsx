@@ -119,11 +119,33 @@ function Navbar({ currentUser, onLogout, onNavigate }) {
   }
 
   function markAllNotificationsRead() {
-    setNotifications((currentNotifications) =>
-      currentNotifications.map((notification) => ({ ...notification, isRead: true }))
-    );
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
     fetch(`${API_BASE_URL}/users/${encodeURIComponent(currentUser.email)}/notifications/read-all`, {
       method: "POST",
+    }).catch(() => {});
+  }
+
+  function deleteNotification(notificationId, e) {
+    e.stopPropagation();
+    setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
+    fetch(`${API_BASE_URL}/users/${encodeURIComponent(currentUser.email)}/notifications/one`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ notificationId }),
+    }).catch(() => {});
+  }
+
+  function deleteReadNotifications() {
+    setNotifications((prev) => prev.filter((n) => !n.isRead));
+    fetch(`${API_BASE_URL}/users/${encodeURIComponent(currentUser.email)}/notifications/read`, {
+      method: "DELETE",
+    }).catch(() => {});
+  }
+
+  function deleteAllNotifications() {
+    setNotifications([]);
+    fetch(`${API_BASE_URL}/users/${encodeURIComponent(currentUser.email)}/notifications/all`, {
+      method: "DELETE",
     }).catch(() => {});
   }
 
@@ -145,7 +167,7 @@ function Navbar({ currentUser, onLogout, onNavigate }) {
             <button
               aria-label="Notifications"
               className="notification-btn"
-              onClick={() => setShowNotifications(!showNotifications)}
+              onClick={() => setShowNotifications(true)}
             >
               <svg aria-hidden="true" viewBox="0 0 24 24">
                 <path d="M18 16v-5a6 6 0 0 0-12 0v5l-2 2h16l-2-2Z" />
@@ -155,26 +177,73 @@ function Navbar({ currentUser, onLogout, onNavigate }) {
             </button>
 
             {showNotifications && (
-              <div className="notification-menu">
-                <div className="notification-menu-header">
-                  <h3>Notifications</h3>
-                  {unreadCount > 0 && (
-                    <button className="text-btn notification-read-all" onClick={markAllNotificationsRead}>
-                      Mark all as read
-                    </button>
-                  )}
+              <>
+                <div
+                  className="notification-overlay"
+                  onClick={() => setShowNotifications(false)}
+                />
+                <div className="notification-drawer" role="dialog" aria-label="Notifications">
+                  <div className="notification-drawer-header">
+                    <h3>Notifications {notifications.length > 0 && <span className="notification-count-badge">{notifications.length}</span>}</h3>
+                    <div className="notification-drawer-actions">
+                      {unreadCount > 0 && (
+                        <button className="notification-action-btn" onClick={markAllNotificationsRead}>
+                          Mark all read
+                        </button>
+                      )}
+                      {notifications.some((n) => n.isRead) && (
+                        <button className="notification-action-btn notification-action-btn--danger" onClick={deleteReadNotifications}>
+                          Clear read
+                        </button>
+                      )}
+                      {notifications.length > 0 && (
+                        <button className="notification-action-btn notification-action-btn--danger" onClick={deleteAllNotifications}>
+                          Clear all
+                        </button>
+                      )}
+                      <button
+                        className="notification-close-btn"
+                        aria-label="Close"
+                        onClick={() => setShowNotifications(false)}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="notification-drawer-body">
+                    {notifications.length ? notifications.map((notification) => (
+                      <div
+                        className={`notification-item ${notification.isRead ? "is-read" : ""}`}
+                        key={notification.id}
+                      >
+                        <button
+                          className="notification-item-content"
+                          onClick={() => openNotification(notification)}
+                        >
+                          <strong>{notification.title}</strong>
+                          <span>{notification.message}</span>
+                        </button>
+                        <button
+                          className="notification-delete-btn"
+                          aria-label="Delete notification"
+                          onClick={(e) => deleteNotification(notification.id, e)}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )) : (
+                      <div className="notification-empty">
+                        <svg width="40" height="40" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                          <path d="M18 16v-5a6 6 0 0 0-12 0v5l-2 2h16l-2-2Z" />
+                          <path d="M10 21h4" />
+                        </svg>
+                        <span>No notifications yet.</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                {notifications.length ? notifications.map((notification) => (
-                  <button
-                    className={`notification-item ${notification.isRead ? "is-read" : ""}`}
-                    key={notification.id}
-                    onClick={() => openNotification(notification)}
-                  >
-                    <strong>{notification.title}</strong>
-                    <span>{notification.message}</span>
-                  </button>
-                )) : <p className="notification-empty">No notifications yet.</p>}
-              </div>
+              </>
             )}
           </div>
         )}

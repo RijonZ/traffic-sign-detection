@@ -149,18 +149,22 @@ async function updateAdminSettings(request, response) {
     const updates = await readBody(request);
     const adminUser = await getAdminUser(request);
     const before = await getSettings();
-    const saved = await updateSettings(updates);
+    const result = await updateSettings(updates);
+    if (!result.ok) {
+      sendJson(response, 422, { message: result.errors[0], errors: result.errors });
+      return;
+    }
     await recordAuditLog(
       {
         userId: adminUser?.id,
         action: "Settings updated",
         entity: "Settings",
         oldValue: before,
-        newValue: { ...saved, status: "Success" },
+        newValue: { ...result.settings, status: "Success" },
       },
       { force: true }
     );
-    sendJson(response, 200, saved);
+    sendJson(response, 200, result.settings);
   } catch {
     sendJson(response, 400, { message: "Invalid request body." });
   }

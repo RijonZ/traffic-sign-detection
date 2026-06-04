@@ -33,9 +33,12 @@ const {
   getNotifications,
   markAllAsRead,
   markAsRead,
+  deleteOne,
+  deleteRead,
+  deleteAll,
 } = require("../controllers/notificationController");
 const { getHome } = require("../controllers/homeController");
-const { updateUserProfile } = require("../controllers/userController");
+const { getUserProfile, updateUserProfile } = require("../controllers/userController");
 const {
   activateBasicPlan,
   activateDemoPlan,
@@ -121,6 +124,7 @@ const routes = [
   { method: "GET", path: /^\/api\/admin\/feedbacks$/, handler: getAdminFeedbacks },
   { method: "GET", path: /^\/api\/manager\/dashboard-analytics$/, handler: getDashboardAnalytics },
   { method: "GET", path: /^\/api\/manager\/export-data$/, handler: getManagerExportData },
+  { method: "GET", path: /^\/api\/users\/([^/]+)\/profile$/, handler: getUserProfile },
   { method: "PUT", path: /^\/api\/users\/([^/]+)\/profile$/, handler: updateUserProfile },
   { method: "GET", path: /^\/api\/users\/([^/]+)\/subscription$/, handler: getUserSubscription },
   { method: "DELETE", path: /^\/api\/users\/([^/]+)\/subscription$/, handler: cancelUserSubscription },
@@ -129,9 +133,12 @@ const routes = [
   { method: "POST", path: /^\/api\/users\/([^/]+)\/detections$/, handler: createDetection },
   { method: "GET", path: /^\/api\/users\/([^/]+)\/reports\/([^/]+)\/pdf$/, handler: downloadReport },
   { method: "GET", path: /^\/api\/users\/([^/]+)\/reports$/, handler: getReports },
-  { method: "GET", path: /^\/api\/users\/([^/]+)\/notifications$/, handler: getNotifications },
-  { method: "POST", path: /^\/api\/users\/([^/]+)\/notifications\/read$/, handler: markAsRead },
-  { method: "POST", path: /^\/api\/users\/([^/]+)\/notifications\/read-all$/, handler: markAllAsRead },
+  { method: "GET",    path: /^\/api\/users\/([^/]+)\/notifications$/,            handler: getNotifications },
+  { method: "POST",   path: /^\/api\/users\/([^/]+)\/notifications\/read$/,      handler: markAsRead },
+  { method: "POST",   path: /^\/api\/users\/([^/]+)\/notifications\/read-all$/,  handler: markAllAsRead },
+  { method: "DELETE", path: /^\/api\/users\/([^/]+)\/notifications\/one$/,       handler: deleteOne },
+  { method: "DELETE", path: /^\/api\/users\/([^/]+)\/notifications\/read$/,      handler: deleteRead },
+  { method: "DELETE", path: /^\/api\/users\/([^/]+)\/notifications\/all$/,       handler: deleteAll },
 ];
 
 function handleRequest(request, response) {
