@@ -30,6 +30,12 @@ function Router() {
 
   const common = { currentUser, onLogout: logout, onNavigate: navigate };
 
+  if (page === "reset-password") {
+    const hashQuery = window.location.hash.split("?")[1] || "";
+    const token = new URLSearchParams(hashQuery).get("token") || "";
+    return <LoginPage {...common} onLogin={login} onSignUp={signUp} initialMode="reset" resetToken={token} />;
+  }
+
   if (page === "login" || page === "signup") {
     return <LoginPage {...common} onLogin={login} onSignUp={signUp} />;
   }

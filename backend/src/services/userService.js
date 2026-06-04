@@ -292,6 +292,35 @@ async function updateProfile(email, { name, password }) {
   return { ok: true, user: formatUser(updated) };
 }
 
+async function forgotPassword(email) {
+  const user = await findUserByEmail(email);
+  if (!user) return { ok: true }; // don't reveal whether email exists
+
+  const { sendResetEmail } = require("./emailService");
+  const token = crypto.randomBytes(32).toString("hex");
+  const tokenHash = hashToken(token);
+
+  await userRepo.clearResetTokensByUser(user.id);
+  await userRepo.insertResetToken(user.id, tokenHash);
+  await sendResetEmail(email, token);
+
+  return { ok: true };
+}
+
+async function resetPassword(token, newPassword) {
+  const tokenHash = hashToken(token);
+  const record = await userRepo.findResetToken(tokenHash);
+
+  if (!record) {
+    return { ok: false, message: "This reset link is invalid or has expired." };
+  }
+
+  await userRepo.updatePassword(record.user_id, await bcrypt.hash(newPassword, BCRYPT_ROUNDS));
+  await userRepo.markResetTokenUsed(tokenHash);
+
+  return { ok: true };
+}
+
 async function revokeLoginSession(refreshToken) {
   if (!refreshToken) return;
   await userRepo.revokeTokenByHash(hashToken(refreshToken));
@@ -355,6 +384,8 @@ module.exports = {
   updateProfile,
   getProfileMeta,
   deleteUser,
+  forgotPassword,
+  resetPassword,
   revokeLoginSession,
   refreshSession,
   validateLogin,

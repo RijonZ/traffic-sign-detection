@@ -1,6 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const { login, logout, signup, refresh } = require("../controllers/authController");
+const { login, logout, signup, refresh, forgotPasswordHandler, resetPasswordHandler } = require("../controllers/authController");
 const { sendMessage } = require("../controllers/chatController");
 const {
   createAdminUser,
@@ -97,6 +97,8 @@ const routes = [
   { method: "POST", path: /^\/api\/auth\/signup$/, handler: signup },
   { method: "POST", path: /^\/api\/auth\/logout$/, handler: logout },
   { method: "POST", path: /^\/api\/auth\/refresh$/, handler: refresh },
+  { method: "POST", path: /^\/api\/auth\/forgot-password$/, handler: forgotPasswordHandler },
+  { method: "POST", path: /^\/api\/auth\/reset-password$/, handler: resetPasswordHandler },
   { method: "POST", path: /^\/api\/chat$/, handler: sendMessage },
   { method: "GET", path: /^\/api\/payments\/subscription$/, handler: getSubscription },
   { method: "POST", path: /^\/api\/payments\/basic-plan$/, handler: activateBasicPlan },

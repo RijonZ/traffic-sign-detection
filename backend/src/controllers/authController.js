@@ -1,4 +1,4 @@
-const { createUserAccount, revokeLoginSession, refreshSession, validateLogin } = require("../services/userService");
+const { createUserAccount, revokeLoginSession, refreshSession, validateLogin, forgotPassword, resetPassword } = require("../services/userService");
 const { readBody, sendJson } = require("../utils/http");
 
 async function login(request, response) {
@@ -65,4 +65,42 @@ async function refresh(request, response) {
   }
 }
 
-module.exports = { login, logout, signup, refresh };
+async function forgotPasswordHandler(request, response) {
+  try {
+    const { email } = await readBody(request);
+    if (!email) {
+      sendJson(response, 400, { message: "Email is required." });
+      return;
+    }
+    await forgotPassword(email);
+    sendJson(response, 200, { ok: true, message: "If an account exists with this email, a reset link has been sent." });
+  } catch (err) {
+    console.error("[forgotPassword]", err.message);
+    sendJson(response, 500, { message: "Could not send reset email. Try again later." });
+  }
+}
+
+async function resetPasswordHandler(request, response) {
+  try {
+    const { token, password } = await readBody(request);
+    if (!token || !password) {
+      sendJson(response, 400, { message: "Token and new password are required." });
+      return;
+    }
+    if (password.length < 6) {
+      sendJson(response, 400, { message: "Password must be at least 6 characters." });
+      return;
+    }
+    const result = await resetPassword(token, password);
+    if (!result.ok) {
+      sendJson(response, 400, { message: result.message });
+      return;
+    }
+    sendJson(response, 200, { ok: true });
+  } catch (err) {
+    console.error("[resetPassword]", err.message);
+    sendJson(response, 500, { message: "Could not reset password. Try again later." });
+  }
+}
+
+module.exports = { login, logout, signup, refresh, forgotPasswordHandler, resetPasswordHandler };

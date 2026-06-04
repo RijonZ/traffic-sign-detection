@@ -212,6 +212,34 @@ async function getProfileCooldowns(userId) {
   return result.rows[0] || null;
 }
 
+async function insertResetToken(userId, tokenHash) {
+  await query(
+    `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
+     VALUES ($1, $2, now() + INTERVAL '1 hour')`,
+    [userId, tokenHash]
+  );
+}
+
+async function findResetToken(tokenHash) {
+  const result = await query(
+    `SELECT id, user_id, expires_at FROM password_reset_tokens
+     WHERE token_hash = $1 AND used_at IS NULL AND expires_at > now()`,
+    [tokenHash]
+  );
+  return result.rows[0] || null;
+}
+
+async function markResetTokenUsed(tokenHash) {
+  await query(
+    `UPDATE password_reset_tokens SET used_at = now() WHERE token_hash = $1`,
+    [tokenHash]
+  );
+}
+
+async function clearResetTokensByUser(userId) {
+  await query(`DELETE FROM password_reset_tokens WHERE user_id = $1`, [userId]);
+}
+
 module.exports = {
   findByEmail,
   findAll,
@@ -231,4 +259,8 @@ module.exports = {
   updateName,
   updatePassword,
   getProfileCooldowns,
+  insertResetToken,
+  findResetToken,
+  markResetTokenUsed,
+  clearResetTokensByUser,
 };
