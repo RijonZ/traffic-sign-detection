@@ -3,7 +3,7 @@ const { getAdminDashboard } = require("../services/adminDashboardService");
 const { getAllDetections } = require("../services/detectionService");
 const { getModelMonitoringSummary } = require("../services/modelMonitoringService");
 const { exportReportsCsv, getAllReports, getAdminReportPdf } = require("../services/reportService");
-const { findUserByEmail, getAllUsers, getUsersSummaryFromList, updateUser, deleteUser } = require("../services/userService");
+const { findUserByEmail, getAllUsers, getUsersSummaryFromList, createUserByAdmin, updateUser, deleteUser } = require("../services/userService");
 const { getSettings, updateSettings } = require("../services/settingsService");
 const { getAllFeedbacks } = require("../services/feedbackService");
 const { hasPermission } = require("../services/permissionService");
@@ -85,6 +85,26 @@ async function getAdminUsers(request, response) {
   sendJson(response, 200, { users, summary: getUsersSummaryFromList(users) });
 }
 
+async function createAdminUser(request, response) {
+  if (!(await checkPermission(request, response, "manage_users"))) return;
+
+  try {
+    const { name, email, password, role } = await readBody(request);
+    if (!name || !email || !password) {
+      sendJson(response, 400, { message: "name, email and password are required." });
+      return;
+    }
+    const result = await createUserByAdmin(name, email, password, role);
+    if (!result.ok) {
+      sendJson(response, 400, { message: result.message });
+      return;
+    }
+    sendJson(response, 201, result.user);
+  } catch {
+    sendJson(response, 400, { message: "Invalid request body." });
+  }
+}
+
 async function updateAdminUser(request, response, params) {
   if (!(await checkPermission(request, response, "manage_users"))) return;
 
@@ -136,6 +156,7 @@ async function getAdminFeedbacks(request, response) {
 }
 
 module.exports = {
+  createAdminUser,
   downloadAdminReport,
   exportAdminReports,
   getAdminAuditLogs,

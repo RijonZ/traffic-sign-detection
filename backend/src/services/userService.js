@@ -136,6 +136,26 @@ async function createUserAccount(name, email, password) {
 
 const VALID_ROLES = ["Administrator", "Manager", "User"];
 
+async function createUserByAdmin(name, email, password, role) {
+  const existingUser = await findUserByEmail(email);
+  if (existingUser) {
+    return { ok: false, message: "An account with this email already exists." };
+  }
+
+  const roleName = role && VALID_ROLES.includes(role) ? role : getRoleFromEmail(email);
+  const roleId = await userRepo.upsertRole(roleName, `${roleName} access role`);
+  const { firstName, lastName } = splitName(name);
+  const newUser = await userRepo.insert(
+    firstName,
+    lastName,
+    email,
+    await bcrypt.hash(password, BCRYPT_ROUNDS)
+  );
+  await userRepo.insertUserRole(newUser.id, roleId);
+
+  return { ok: true, user: formatUser({ ...newUser, role: roleName }) };
+}
+
 async function updateUser(userId, { role, isActive }) {
   if (role !== undefined) {
     if (!VALID_ROLES.includes(role)) {
@@ -255,6 +275,7 @@ async function validateLogin(email, password) {
 module.exports = {
   findUserByEmail,
   createUserAccount,
+  createUserByAdmin,
   getAllUsers,
   getUsersSummary,
   getUsersSummaryFromList,

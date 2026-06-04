@@ -1,6 +1,9 @@
+const fs = require("fs");
+const path = require("path");
 const { login, logout, signup, refresh } = require("../controllers/authController");
 const { sendMessage } = require("../controllers/chatController");
 const {
+  createAdminUser,
   downloadAdminReport,
   exportAdminReports,
   getAdminAuditLogs,
@@ -55,6 +58,24 @@ const routes = [
   { method: "GET", path: /^\/api\/health$/, handler: (_, response) => sendJson(response, 200, { ok: true }) },
   {
     method: "GET",
+    path: /^\/api\/docs$/,
+    handler: (_, response) => {
+      const html = fs.readFileSync(path.join(__dirname, "../../docs/swagger.html"), "utf8");
+      response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      response.end(html);
+    },
+  },
+  {
+    method: "GET",
+    path: /^\/api\/docs\/spec$/,
+    handler: (_, response) => {
+      const spec = fs.readFileSync(path.join(__dirname, "../../docs/openapi.json"), "utf8");
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(spec);
+    },
+  },
+  {
+    method: "GET",
     path: /^\/api\/permissions$/,
     handler: async (request, response) => {
       const url = new URL(request.url, `http://${request.headers.host}`);
@@ -91,8 +112,9 @@ const routes = [
   { method: "GET", path: /^\/api\/admin\/reports\/export$/, handler: exportAdminReports },
   { method: "GET", path: /^\/api\/admin\/reports\/([^/]+)\/pdf$/, handler: downloadAdminReport },
   { method: "GET", path: /^\/api\/admin\/reports$/, handler: getAdminReports },
-  { method: "GET", path: /^\/api\/admin\/users$/, handler: getAdminUsers },
-  { method: "PUT", path: /^\/api\/admin\/users\/([^/]+)$/, handler: updateAdminUser },
+  { method: "GET",  path: /^\/api\/admin\/users$/, handler: getAdminUsers },
+  { method: "POST", path: /^\/api\/admin\/users$/, handler: createAdminUser },
+  { method: "PUT",  path: /^\/api\/admin\/users\/([^/]+)$/, handler: updateAdminUser },
   { method: "DELETE", path: /^\/api\/admin\/users\/([^/]+)$/, handler: deleteAdminUser },
   { method: "GET", path: /^\/api\/admin\/settings$/, handler: getAdminSettings },
   { method: "PUT", path: /^\/api\/admin\/settings$/, handler: updateAdminSettings },

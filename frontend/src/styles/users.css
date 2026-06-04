@@ -98,6 +98,101 @@
   background: #fca5a5;
 }
 
+.create-user-modal {
+  max-width: 520px;
+}
+
+.create-user-modal-header {
+  align-items: flex-start;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+}
+
+.create-user-modal-header h2 {
+  color: #111827;
+  font-size: 20px;
+  margin: 4px 0 0;
+}
+
+.create-user-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.create-user-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.create-user-field label {
+  color: #374151;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.create-user-field input {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  padding: 10px 14px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.create-user-field input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.role-picker {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.role-option {
+  background: #f8fafc;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  color: #4b5563;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 8px;
+  text-align: center;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.role-option:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+}
+
+.role-option-active {
+  background: #eff6ff;
+  border-color: #2563eb;
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
+.create-user-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.create-user-actions .secondary-btn,
+.create-user-actions .primary-btn {
+  flex: 1;
+}
+
 @media (max-width: 768px) {
   .users-row {
     grid-template-columns: 1fr;

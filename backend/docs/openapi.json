@@ -1,0 +1,704 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Traffic Sign AI API",
+    "description": "REST API for the Traffic Sign Detection system. Administrator and Manager endpoints require the `adminEmail` / `managerEmail` query parameter.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    { "url": "http://localhost:5000", "description": "Local development server" }
+  ],
+  "tags": [
+    { "name": "Auth",          "description": "Authentication and session management" },
+    { "name": "Detection",     "description": "Traffic sign detection operations" },
+    { "name": "Dashboard",     "description": "User dashboard and reports" },
+    { "name": "Admin",         "description": "Administrator-only endpoints" },
+    { "name": "Manager",       "description": "Manager-only endpoints" },
+    { "name": "Payments",      "description": "Subscription and payment management" },
+    { "name": "Notifications", "description": "User notification management" },
+    { "name": "Chat",          "description": "AI chat assistant (OpenAI)" },
+    { "name": "Permissions",   "description": "Role permission inspection" }
+  ],
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": ["Auth"],
+        "summary": "Health check",
+        "responses": {
+          "200": { "description": "Server is running", "content": { "application/json": { "example": { "ok": true } } } }
+        }
+      }
+    },
+    "/api/home": {
+      "get": {
+        "tags": ["Dashboard"],
+        "summary": "Get home page statistics",
+        "responses": {
+          "200": { "description": "Home statistics" }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Log in with email and password",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email":    { "type": "string", "example": "user@example.com" },
+                  "password": { "type": "string", "example": "secret123" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Login successful — returns user + tokens" },
+          "401": { "description": "Invalid credentials" }
+        }
+      }
+    },
+    "/api/auth/signup": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Create a new account",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "email", "password"],
+                "properties": {
+                  "name":     { "type": "string", "example": "Arben Krasniqi" },
+                  "email":    { "type": "string", "example": "arben@example.com" },
+                  "password": { "type": "string", "example": "secret123" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Account created — returns user + tokens" },
+          "400": { "description": "Email already exists" }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Revoke refresh token and end session",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": { "refreshToken": { "type": "string" } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Logged out" }
+        }
+      }
+    },
+    "/api/auth/refresh": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Exchange refresh token for a new access token",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": { "refreshToken": { "type": "string" } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "New access token returned" },
+          "401": { "description": "Invalid or expired refresh token" }
+        }
+      }
+    },
+    "/api/chat": {
+      "post": {
+        "tags": ["Chat"],
+        "summary": "Send a message to the AI assistant (OpenAI)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "message": { "type": "string", "example": "What does a stop sign look like?" },
+                  "role":    { "type": "string", "example": "User" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "AI reply returned" }
+        }
+      }
+    },
+    "/api/permissions": {
+      "get": {
+        "tags": ["Permissions"],
+        "summary": "List all permissions assigned to a user's role",
+        "parameters": [
+          { "in": "query", "name": "email", "required": true, "schema": { "type": "string" }, "example": "admin@example.com" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Permissions list",
+            "content": {
+              "application/json": {
+                "example": {
+                  "email": "admin@example.com",
+                  "role": "Administrator",
+                  "permissions": ["manage_users", "view_audit_logs", "view_reports"]
+                }
+              }
+            }
+          },
+          "404": { "description": "User not found" }
+        }
+      }
+    },
+    "/api/detect-sign": {
+      "get": {
+        "tags": ["Detection"],
+        "summary": "Get detection history for the authenticated user",
+        "parameters": [
+          { "in": "query", "name": "email", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "List of past detections" }
+        }
+      },
+      "post": {
+        "tags": ["Detection"],
+        "summary": "Submit an image for traffic sign detection",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email":    { "type": "string" },
+                  "imageUrl": { "type": "string" },
+                  "fileName": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Detection result returned" },
+          "400": { "description": "Invalid request" }
+        }
+      }
+    },
+    "/api/detect-sign/feedbacks": {
+      "get": {
+        "tags": ["Detection"],
+        "summary": "Get feedback submitted by the current user",
+        "parameters": [
+          { "in": "query", "name": "email", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "List of feedbacks" }
+        }
+      }
+    },
+    "/api/detect-sign/{detectionId}/feedback": {
+      "get": {
+        "tags": ["Detection"],
+        "summary": "Get feedback for a specific detection",
+        "parameters": [
+          { "in": "path", "name": "detectionId", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Feedback data" }
+        }
+      },
+      "post": {
+        "tags": ["Detection"],
+        "summary": "Submit feedback for a detection result",
+        "parameters": [
+          { "in": "path", "name": "detectionId", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email":   { "type": "string" },
+                  "rating":  { "type": "integer", "minimum": 1, "maximum": 5 },
+                  "comment": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Feedback saved" }
+        }
+      }
+    },
+    "/api/users/{userId}/dashboard": {
+      "get": {
+        "tags": ["Dashboard"],
+        "summary": "Get user dashboard summary",
+        "parameters": [
+          { "in": "path", "name": "userId", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Dashboard data" }
+        }
+      }
+    },
+    "/api/users/{userId}/detections": {
+      "get": {
+        "tags": ["Dashboard"],
+        "summary": "List detections for a user",
+        "parameters": [
+          { "in": "path", "name": "userId", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Detection list" }
+        }
+      },
+      "post": {
+        "tags": ["Dashboard"],
+        "summary": "Create a detection record for a user",
+        "parameters": [
+          { "in": "path", "name": "userId", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Detection created" }
+        }
+      }
+    },
+    "/api/users/{userId}/reports": {
+      "get": {
+        "tags": ["Dashboard"],
+        "summary": "List reports for a user",
+        "parameters": [
+          { "in": "path", "name": "userId", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Reports list" }
+        }
+      }
+    },
+    "/api/users/{userId}/reports/{reportId}/pdf": {
+      "get": {
+        "tags": ["Dashboard"],
+        "summary": "Download a PDF report for a user",
+        "parameters": [
+          { "in": "path", "name": "userId",   "required": true, "schema": { "type": "string" } },
+          { "in": "path", "name": "reportId", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "PDF file", "content": { "application/pdf": {} } },
+          "404": { "description": "Report not found" }
+        }
+      }
+    },
+    "/api/users/{userId}/profile": {
+      "put": {
+        "tags": ["Dashboard"],
+        "summary": "Update user profile (name or password)",
+        "parameters": [
+          { "in": "path", "name": "userId", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name":     { "type": "string" },
+                  "password": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Profile updated" },
+          "400": { "description": "Validation error (e.g. name change cooldown)" }
+        }
+      }
+    },
+    "/api/users/{userId}/subscription": {
+      "get": {
+        "tags": ["Payments"],
+        "summary": "Get active subscription for a user",
+        "parameters": [
+          { "in": "path", "name": "userId", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Subscription data" }
+        }
+      },
+      "delete": {
+        "tags": ["Payments"],
+        "summary": "Cancel user subscription",
+        "parameters": [
+          { "in": "path", "name": "userId", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Subscription cancelled" }
+        }
+      }
+    },
+    "/api/users/{userId}/notifications": {
+      "get": {
+        "tags": ["Notifications"],
+        "summary": "Get notifications for a user",
+        "parameters": [
+          { "in": "path", "name": "userId", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Notification list" }
+        }
+      }
+    },
+    "/api/users/{userId}/notifications/read": {
+      "post": {
+        "tags": ["Notifications"],
+        "summary": "Mark a specific notification as read",
+        "parameters": [
+          { "in": "path", "name": "userId", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Marked as read" }
+        }
+      }
+    },
+    "/api/users/{userId}/notifications/read-all": {
+      "post": {
+        "tags": ["Notifications"],
+        "summary": "Mark all notifications as read",
+        "parameters": [
+          { "in": "path", "name": "userId", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "All marked as read" }
+        }
+      }
+    },
+    "/api/payments/subscription": {
+      "get": {
+        "tags": ["Payments"],
+        "summary": "Get subscription plans available",
+        "responses": {
+          "200": { "description": "Subscription info" }
+        }
+      }
+    },
+    "/api/payments/basic-plan": {
+      "post": {
+        "tags": ["Payments"],
+        "summary": "Activate the basic plan for a user",
+        "responses": {
+          "200": { "description": "Plan activated" }
+        }
+      }
+    },
+    "/api/payments/demo-plan": {
+      "post": {
+        "tags": ["Payments"],
+        "summary": "Activate a free demo plan",
+        "responses": {
+          "200": { "description": "Demo plan activated" }
+        }
+      }
+    },
+    "/api/payments/create-checkout-session": {
+      "post": {
+        "tags": ["Payments"],
+        "summary": "Create a Stripe checkout session",
+        "responses": {
+          "200": { "description": "Stripe session URL returned" }
+        }
+      }
+    },
+    "/api/payments/confirm-checkout-session": {
+      "post": {
+        "tags": ["Payments"],
+        "summary": "Confirm a completed Stripe checkout session",
+        "responses": {
+          "200": { "description": "Payment confirmed and subscription activated" }
+        }
+      }
+    },
+    "/api/admin/dashboard": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Get administrator dashboard summary",
+        "parameters": [
+          { "in": "query", "name": "adminEmail", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Dashboard summary" },
+          "403": { "description": "Insufficient permissions" }
+        }
+      }
+    },
+    "/api/admin/users": {
+      "post": {
+        "tags": ["Admin"],
+        "summary": "Create a new user account (requires manage_users permission)",
+        "parameters": [
+          { "in": "query", "name": "adminEmail", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "email", "password"],
+                "properties": {
+                  "name":     { "type": "string",  "example": "Arben Krasniqi" },
+                  "email":    { "type": "string",  "example": "arben@example.com" },
+                  "password": { "type": "string",  "example": "secret123" },
+                  "role":     { "type": "string",  "enum": ["Administrator", "Manager", "User"], "example": "User" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "User created — returns user object without tokens" },
+          "400": { "description": "Email already exists or missing fields" },
+          "403": { "description": "Insufficient permissions" }
+        }
+      },
+      "get": {
+        "tags": ["Admin"],
+        "summary": "List all users (requires manage_users permission)",
+        "parameters": [
+          { "in": "query", "name": "adminEmail", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "User list with summary" },
+          "403": { "description": "Insufficient permissions" }
+        }
+      }
+    },
+    "/api/admin/users/{userId}": {
+      "put": {
+        "tags": ["Admin"],
+        "summary": "Update user role or active status",
+        "parameters": [
+          { "in": "path",  "name": "userId",     "required": true, "schema": { "type": "string" } },
+          { "in": "query", "name": "adminEmail",  "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "role":     { "type": "string", "enum": ["Administrator", "Manager", "User"] },
+                  "isActive": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "User updated" },
+          "400": { "description": "Validation error" },
+          "403": { "description": "Insufficient permissions" }
+        }
+      },
+      "delete": {
+        "tags": ["Admin"],
+        "summary": "Delete a user account",
+        "parameters": [
+          { "in": "path",  "name": "userId",    "required": true, "schema": { "type": "string" } },
+          { "in": "query", "name": "adminEmail", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "User deleted" },
+          "400": { "description": "Cannot delete last administrator" },
+          "403": { "description": "Insufficient permissions" }
+        }
+      }
+    },
+    "/api/admin/reports": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "List all detection reports (requires view_reports permission)",
+        "parameters": [
+          { "in": "query", "name": "adminEmail", "required": true,  "schema": { "type": "string" } },
+          { "in": "query", "name": "status",     "required": false, "schema": { "type": "string" } },
+          { "in": "query", "name": "user",       "required": false, "schema": { "type": "string" } },
+          { "in": "query", "name": "dateFrom",   "required": false, "schema": { "type": "string", "format": "date" } },
+          { "in": "query", "name": "dateTo",     "required": false, "schema": { "type": "string", "format": "date" } }
+        ],
+        "responses": {
+          "200": { "description": "Reports list with summary" },
+          "403": { "description": "Insufficient permissions" }
+        }
+      }
+    },
+    "/api/admin/reports/{reportId}/pdf": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Download a PDF report (requires download_reports permission)",
+        "parameters": [
+          { "in": "path",  "name": "reportId",  "required": true, "schema": { "type": "string" } },
+          { "in": "query", "name": "adminEmail", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "PDF file", "content": { "application/pdf": {} } },
+          "403": { "description": "Insufficient permissions" },
+          "404": { "description": "Report not found" }
+        }
+      }
+    },
+    "/api/admin/reports/export": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Export all reports as CSV (requires export_reports permission)",
+        "parameters": [
+          { "in": "query", "name": "adminEmail", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "CSV file", "content": { "text/csv": {} } },
+          "403": { "description": "Insufficient permissions" }
+        }
+      }
+    },
+    "/api/admin/detections": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "List all detections system-wide (requires view_admin_detections permission)",
+        "parameters": [
+          { "in": "query", "name": "adminEmail", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "All detections" },
+          "403": { "description": "Insufficient permissions" }
+        }
+      }
+    },
+    "/api/admin/audit-logs": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Get system audit logs (requires view_audit_logs permission)",
+        "parameters": [
+          { "in": "query", "name": "adminEmail", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Audit log entries" },
+          "403": { "description": "Insufficient permissions" }
+        }
+      }
+    },
+    "/api/admin/model-monitoring": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Get model performance monitoring data (requires view_model_monitoring permission)",
+        "parameters": [
+          { "in": "query", "name": "adminEmail", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Model monitoring summary" },
+          "403": { "description": "Insufficient permissions" }
+        }
+      }
+    },
+    "/api/admin/settings": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Get system settings (requires manage_settings permission)",
+        "parameters": [
+          { "in": "query", "name": "adminEmail", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Settings key-value pairs" },
+          "403": { "description": "Insufficient permissions" }
+        }
+      },
+      "put": {
+        "tags": ["Admin"],
+        "summary": "Update system settings (requires manage_settings permission)",
+        "parameters": [
+          { "in": "query", "name": "adminEmail", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "type": "object", "additionalProperties": { "type": "string" } }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Settings saved" },
+          "403": { "description": "Insufficient permissions" }
+        }
+      }
+    },
+    "/api/admin/feedbacks": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Get all user feedbacks (requires view_feedbacks permission)",
+        "parameters": [
+          { "in": "query", "name": "adminEmail", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Feedback list" },
+          "403": { "description": "Insufficient permissions" }
+        }
+      }
+    },
+    "/api/manager/dashboard-analytics": {
+      "get": {
+        "tags": ["Manager"],
+        "summary": "Get analytics dashboard data (requires view_analytics permission)",
+        "parameters": [
+          { "in": "query", "name": "managerEmail", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Analytics data" },
+          "403": { "description": "Insufficient permissions" }
+        }
+      }
+    },
+    "/api/manager/export-data": {
+      "get": {
+        "tags": ["Manager"],
+        "summary": "Export detection data (requires export_data permission)",
+        "parameters": [
+          { "in": "query", "name": "managerEmail", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Detection export data" },
+          "403": { "description": "Insufficient permissions" }
+        }
+      }
+    }
+  }
+}

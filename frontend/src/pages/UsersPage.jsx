@@ -3,6 +3,7 @@ import Navbar from "../shared/Navbar";
 import { usePagination, Pagination } from "../shared/Pagination";
 import "../styles/auth.css";
 import "../styles/dashboard.css";
+import "../styles/reports.css";
 import "../styles/users.css";
 
 const USERS_KEY = "traffic-sign-users";
@@ -24,11 +25,17 @@ function readUsers() {
   );
 }
 
+const EMPTY_FORM = { name: "", email: "", password: "", role: "User" };
+
 function UsersPage({ currentUser, onLogout, onNavigate }) {
   const fallbackUsers = useMemo(readUsers, []);
   const [users, setUsers] = useState(fallbackUsers);
   const [saving, setSaving] = useState(null);
   const [actionError, setActionError] = useState(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [createForm, setCreateForm] = useState(EMPTY_FORM);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
 
   useEffect(() => {
     if (!actionError) return;
@@ -94,6 +101,34 @@ function UsersPage({ currentUser, onLogout, onNavigate }) {
       setActionError("Could not connect to server.");
     } finally {
       setSaving(null);
+    }
+  }
+
+  async function handleCreateUser(e) {
+    e.preventDefault();
+    setCreateError("");
+    setCreating(true);
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/admin/users?adminEmail=${encodeURIComponent(currentUser.email)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(createForm),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        setCreateError(data.message || "Could not create user.");
+        return;
+      }
+      setUsers((prev) => [data, ...prev]);
+      setShowCreateForm(false);
+      setCreateForm(EMPTY_FORM);
+    } catch {
+      setCreateError("Could not connect to server.");
+    } finally {
+      setCreating(false);
     }
   }
 
@@ -170,10 +205,90 @@ function UsersPage({ currentUser, onLogout, onNavigate }) {
             <h1>Users</h1>
             <p>Review registered accounts and check which role each user has in the system.</p>
           </div>
-          <button className="secondary-btn" onClick={() => onNavigate("admin-dashboard")}>
-            Back to Admin Dashboard
-          </button>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <button className="primary-btn" onClick={() => { setShowCreateForm(true); setCreateError(""); }}>
+              Add User
+            </button>
+            <button className="secondary-btn" onClick={() => onNavigate("admin-dashboard")}>
+              Back to Admin Dashboard
+            </button>
+          </div>
         </section>
+
+        {showCreateForm && (
+          <div className="report-modal-overlay" onClick={() => setShowCreateForm(false)}>
+            <div className="report-modal create-user-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="create-user-modal-header">
+                <div>
+                  <span className="eyebrow">Administration</span>
+                  <h2>Add New User</h2>
+                </div>
+                <button className="report-modal-close" onClick={() => setShowCreateForm(false)}>✕</button>
+              </div>
+
+              <form onSubmit={handleCreateUser} className="create-user-form">
+                <div className="create-user-field">
+                  <label>Full Name</label>
+                  <input
+                    placeholder="e.g. Filan Fisteku"
+                    value={createForm.name}
+                    required
+                    onChange={(e) => setCreateForm((f) => ({ ...f, name: e.target.value }))}
+                  />
+                </div>
+
+                <div className="create-user-field">
+                  <label>Email Address</label>
+                  <input
+                    type="email"
+                    placeholder="e.g. filan@example.com"
+                    value={createForm.email}
+                    required
+                    onChange={(e) => setCreateForm((f) => ({ ...f, email: e.target.value }))}
+                  />
+                </div>
+
+                <div className="create-user-field">
+                  <label>Password</label>
+                  <input
+                    type="password"
+                    placeholder="Minimum 6 characters"
+                    value={createForm.password}
+                    required
+                    onChange={(e) => setCreateForm((f) => ({ ...f, password: e.target.value }))}
+                  />
+                </div>
+
+                <div className="create-user-field">
+                  <label>Role</label>
+                  <div className="role-picker">
+                    {["User", "Manager", "Administrator"].map((r) => (
+                      <button
+                        key={r}
+                        type="button"
+                        className={`role-option${createForm.role === r ? " role-option-active" : ""}`}
+                        onClick={() => setCreateForm((f) => ({ ...f, role: r }))}
+                      >
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {createError && <p className="auth-error">{createError}</p>}
+
+                <div className="create-user-actions">
+                  <button type="button" className="secondary-btn" onClick={() => setShowCreateForm(false)}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="primary-btn" disabled={creating}>
+                    {creating ? "Creating..." : "Create User"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         <section className="dashboard-grid">
           <div className="dashboard-card">
