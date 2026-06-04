@@ -1,6 +1,7 @@
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const userRepo = require("../repositories/userRepository");
+const { recordAuditLog } = require("./auditLogService");
 const { signAccessToken, signRefreshToken, verifyRefreshToken } = require("../utils/jwt");
 
 const BCRYPT_ROUNDS = 12;
@@ -121,6 +122,13 @@ async function createUserAccount(name, email, password) {
     "New user registered",
     `${email} created a new account.`
   );
+  await recordAuditLog({
+    userId: newUser.id,
+    action: "User signed up",
+    entity: "Authentication",
+    entityId: newUser.id,
+    newValue: { email, role: roleName, status: "Success" },
+  });
 
   return {
     ok: true,
@@ -136,7 +144,7 @@ async function createUserAccount(name, email, password) {
 
 const VALID_ROLES = ["Administrator", "Manager", "User"];
 
-async function createUserByAdmin(name, email, password, role) {
+async function createUserByAdmin(name, email, password, role, actor) {
   const existingUser = await findUserByEmail(email);
   if (existingUser) {
     return { ok: false, message: "An account with this email already exists." };
@@ -152,18 +160,25 @@ async function createUserByAdmin(name, email, password, role) {
     await bcrypt.hash(password, BCRYPT_ROUNDS)
   );
   await userRepo.insertUserRole(newUser.id, roleId);
+  await recordAuditLog({
+    userId: actor?.id || null,
+    action: "User created by administrator",
+    entity: "Users",
+    entityId: newUser.id,
+    newValue: { email, role: roleName, actorEmail: actor?.email, status: "Success" },
+  });
 
   return { ok: true, user: formatUser({ ...newUser, role: roleName }) };
 }
 
-async function updateUser(userId, { role, isActive }) {
+async function updateUser(userId, { role, isActive }, actor) {
+  const oldRole = await userRepo.getRoleName(userId);
   if (role !== undefined) {
     if (!VALID_ROLES.includes(role)) {
       return { ok: false, message: "Invalid role. Must be Administrator, Manager, or User." };
     }
     if (role !== "Administrator") {
-      const currentRole = await userRepo.getRoleName(userId);
-      if (currentRole === "Administrator" && (await userRepo.countAdmins()) <= 1) {
+      if (oldRole === "Administrator" && (await userRepo.countAdmins()) <= 1) {
         return { ok: false, message: "Cannot demote the last administrator." };
       }
     }
@@ -182,15 +197,32 @@ async function updateUser(userId, { role, isActive }) {
     await userRepo.insertUserRole(userId, roleId);
   }
 
+  await recordAuditLog({
+    userId: actor?.id || null,
+    action: "User updated",
+    entity: "Users",
+    entityId: userId,
+    oldValue: { role: oldRole },
+    newValue: { role: role || oldRole, isActive, actorEmail: actor?.email, status: "Success" },
+  });
+
   return { ok: true };
 }
 
-async function deleteUser(userId) {
+async function deleteUser(userId, actor) {
   const currentRole = await userRepo.getRoleName(userId);
   if (currentRole === "Administrator" && (await userRepo.countAdmins()) <= 1) {
     return { ok: false, message: "Cannot delete the last administrator." };
   }
 
+  await recordAuditLog({
+    userId: actor?.id || null,
+    action: "User deleted",
+    entity: "Users",
+    entityId: userId,
+    oldValue: { role: currentRole },
+    newValue: { actorEmail: actor?.email, status: "Success" },
+  });
   await userRepo.deleteById(userId);
   return { ok: true };
 }
@@ -262,6 +294,13 @@ async function validateLogin(email, password) {
   if (!passwordMatch) return null;
 
   const { accessToken, refreshToken } = await createLoginSession(user.id, user.email, user.role);
+  await recordAuditLog({
+    userId: user.id,
+    action: "User logged in",
+    entity: "Authentication",
+    entityId: user.id,
+    newValue: { email: user.email, role: user.role, status: "Success" },
+  });
 
   return {
     ...formatUser(user),

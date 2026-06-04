@@ -7,6 +7,7 @@ async function findSaved() {
         al.id,
         al.action,
         al.entity,
+        COALESCE(al.new_value->>'status', 'Success') AS status,
         al.created_at,
         u.email,
         trim(concat(u.first_name, ' ', u.last_name)) AS user_name
@@ -17,6 +18,26 @@ async function findSaved() {
     `
   );
   return result.rows;
+}
+
+async function insert({ userId, action, entity, entityId, oldValue, newValue, ipAddress }) {
+  const result = await query(
+    `
+      INSERT INTO audit_logs (user_id, action, entity, entity_id, old_value, new_value, ip_address)
+      VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7)
+      RETURNING id
+    `,
+    [
+      userId || null,
+      action,
+      entity,
+      entityId || null,
+      oldValue === undefined ? null : JSON.stringify(oldValue),
+      newValue === undefined ? null : JSON.stringify(newValue),
+      ipAddress || null,
+    ]
+  );
+  return result.rows[0];
 }
 
 async function findFromDetections() {
@@ -62,4 +83,4 @@ async function findFromUsers() {
   return result.rows;
 }
 
-module.exports = { findSaved, findFromDetections, findFromUsers };
+module.exports = { findSaved, findFromDetections, findFromUsers, insert };

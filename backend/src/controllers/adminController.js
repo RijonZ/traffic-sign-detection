@@ -6,6 +6,7 @@ const { exportReportsCsv, getAllReports, getAdminReportPdf } = require("../servi
 const { findUserByEmail, getAllUsers, getUsersSummaryFromList, createUserByAdmin, updateUser, deleteUser } = require("../services/userService");
 const { getSettings, updateSettings } = require("../services/settingsService");
 const { getAllFeedbacks } = require("../services/feedbackService");
+const { recordAuditLog } = require("../services/auditLogService");
 const { hasPermission } = require("../services/permissionService");
 const { sendCsv, sendJson, readBody, sendPdf } = require("../utils/http");
 
@@ -89,12 +90,13 @@ async function createAdminUser(request, response) {
   if (!(await checkPermission(request, response, "manage_users"))) return;
 
   try {
+    const adminUser = await getAdminUser(request);
     const { name, email, password, role } = await readBody(request);
     if (!name || !email || !password) {
       sendJson(response, 400, { message: "name, email and password are required." });
       return;
     }
-    const result = await createUserByAdmin(name, email, password, role);
+    const result = await createUserByAdmin(name, email, password, role, adminUser);
     if (!result.ok) {
       sendJson(response, 400, { message: result.message });
       return;
@@ -110,8 +112,9 @@ async function updateAdminUser(request, response, params) {
 
   const userId = params[0];
   try {
+    const adminUser = await getAdminUser(request);
     const { role, isActive } = await readBody(request);
-    const result = await updateUser(userId, { role, isActive });
+    const result = await updateUser(userId, { role, isActive }, adminUser);
     if (!result.ok) {
       sendJson(response, 400, { message: result.message });
       return;
@@ -126,7 +129,8 @@ async function deleteAdminUser(request, response, params) {
   if (!(await checkPermission(request, response, "manage_users"))) return;
 
   const userId = params[0];
-  const result = await deleteUser(userId);
+  const adminUser = await getAdminUser(request);
+  const result = await deleteUser(userId, adminUser);
   if (!result.ok) {
     sendJson(response, 400, { message: result.message });
     return;
@@ -143,7 +147,19 @@ async function updateAdminSettings(request, response) {
   if (!(await checkPermission(request, response, "manage_settings"))) return;
   try {
     const updates = await readBody(request);
+    const adminUser = await getAdminUser(request);
+    const before = await getSettings();
     const saved = await updateSettings(updates);
+    await recordAuditLog(
+      {
+        userId: adminUser?.id,
+        action: "Settings updated",
+        entity: "Settings",
+        oldValue: before,
+        newValue: { ...saved, status: "Success" },
+      },
+      { force: true }
+    );
     sendJson(response, 200, saved);
   } catch {
     sendJson(response, 400, { message: "Invalid request body." });

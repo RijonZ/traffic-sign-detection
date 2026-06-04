@@ -1,4 +1,5 @@
 const auditLogRepo = require("../repositories/auditLogRepository");
+const settingsRepo = require("../repositories/settingsRepository");
 
 function formatAuditLog(row) {
   return {
@@ -40,4 +41,36 @@ async function getAuditLogs() {
   };
 }
 
-module.exports = { getAuditLogs };
+async function isAuditLoggingEnabled(force) {
+  if (force) return true;
+
+  try {
+    const rows = await settingsRepo.findAll();
+    const setting = rows.find((row) => row.key === "auditLoggingEnabled");
+    return setting ? setting.value === "true" : true;
+  } catch {
+    return true;
+  }
+}
+
+async function recordAuditLog(entry, options = {}) {
+  try {
+    if (!(await isAuditLoggingEnabled(options.force))) {
+      return null;
+    }
+
+    return auditLogRepo.insert({
+      userId: entry.userId,
+      action: entry.action || "System event",
+      entity: entry.entity || "System",
+      entityId: entry.entityId,
+      oldValue: entry.oldValue,
+      newValue: entry.newValue,
+      ipAddress: entry.ipAddress,
+    });
+  } catch {
+    return null;
+  }
+}
+
+module.exports = { getAuditLogs, recordAuditLog };

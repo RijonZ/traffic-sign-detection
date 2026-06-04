@@ -1,6 +1,7 @@
 const detectionRepo = require("../repositories/detectionRepository");
 const rateLimitLogRepo = require("../repositories/rateLimitLogRepository");
 const { getClient: getRedis } = require("../db/redis");
+const { recordAuditLog } = require("./auditLogService");
 const { findUserByEmail } = require("./userService");
 
 const BASIC_PLAN_LIMIT = 3;
@@ -139,6 +140,18 @@ async function addDetection(email, data) {
   );
 
   const [detection] = await getUserDetections(email);
+  await recordAuditLog({
+    userId: user.id,
+    action: `Detection request ${status}`,
+    entity: "Detection Request",
+    entityId: requestId,
+    newValue: {
+      fileName: data.fileName || "unknown-file",
+      sign: data.sign || "Not detected",
+      confidence: Number(data.confidence || 0),
+      status: status === "rejected" ? "Rejected" : "Success",
+    },
+  });
   return detection;
 }
 
