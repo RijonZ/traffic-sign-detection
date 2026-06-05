@@ -62,4 +62,17 @@ function readBody(request) {
   });
 }
 
-module.exports = { sendJson, sendOptions, notFound, readBody, sendCsv, sendPdf };
+function sendFile(response, fileName, content, contentType) {
+  const body = Buffer.isBuffer(content) ? content : Buffer.from(content, "utf8");
+  response.writeHead(200, {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+    "Content-Disposition": `attachment; filename="${fileName}"`,
+    "Content-Length": body.length,
+    "Content-Type": contentType,
+  });
+  response.end(body);
+}
+
+module.exports = { sendJson, sendOptions, notFound, readBody, sendCsv, sendPdf, sendFile };

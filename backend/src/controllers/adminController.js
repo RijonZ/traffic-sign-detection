@@ -3,12 +3,13 @@ const { getAdminDashboard } = require("../services/adminDashboardService");
 const { getAllDetections } = require("../services/detectionService");
 const { getModelMonitoringSummary } = require("../services/modelMonitoringService");
 const { exportReportsCsv, getAllReports, getAdminReportPdf } = require("../services/reportService");
-const { findUserByEmail, getAllUsers, getUsersSummaryFromList, createUserByAdmin, updateUser, deleteUser } = require("../services/userService");
+const { findUserByEmail, getAllUsers, getUsersSummaryFromList, createUserByAdmin, updateUser, deleteUser, bulkImportUsers } = require("../services/userService");
 const { getSettings, updateSettings } = require("../services/settingsService");
 const { getAllFeedbacks } = require("../services/feedbackService");
 const { recordAuditLog } = require("../services/auditLogService");
 const { hasPermission } = require("../services/permissionService");
-const { sendCsv, sendJson, readBody, sendPdf } = require("../utils/http");
+const { buildExport, DATASETS } = require("../services/exportDataService");
+const { sendCsv, sendJson, readBody, sendPdf, sendFile } = require("../utils/http");
 
 async function getAdminUser(request) {
   const url = new URL(request.url, `http://${request.headers.host}`);
@@ -175,6 +176,62 @@ async function getAdminFeedbacks(request, response) {
   sendJson(response, 200, { feedbacks: await getAllFeedbacks() });
 }
 
+async function exportAdminDataset(request, response) {
+  const url = new URL(request.url, `http://${request.headers.host}`);
+  const dataset = url.searchParams.get("dataset") || "";
+  const format = url.searchParams.get("format") || "csv";
+
+  const user = await getAdminUser(request);
+  if (!user) {
+    sendJson(response, 403, { message: "Insufficient permissions." });
+    return;
+  }
+
+  const meta = DATASETS[dataset];
+  if (!meta) {
+    sendJson(response, 400, { message: `Unknown dataset: ${dataset}` });
+    return;
+  }
+  if (!meta.roles.includes(user.role)) {
+    sendJson(response, 403, { message: "You do not have access to this dataset." });
+    return;
+  }
+
+  try {
+    const { content, contentType, fileName } = await buildExport(dataset, format);
+    sendFile(response, fileName, content, contentType);
+  } catch (err) {
+    sendJson(response, 500, { message: "Export failed. " + err.message });
+  }
+}
+
+async function importAdminData(request, response) {
+  if (!(await checkPermission(request, response, "manage_users"))) return;
+
+  try {
+    const { dataset, records } = await readBody(request);
+
+    if (dataset !== "users") {
+      sendJson(response, 400, { message: "Only user import is supported." });
+      return;
+    }
+    if (!Array.isArray(records) || records.length === 0) {
+      sendJson(response, 400, { message: "No records provided." });
+      return;
+    }
+    if (records.length > 500) {
+      sendJson(response, 400, { message: "Maximum 500 records per import." });
+      return;
+    }
+
+    const actor = await getAdminUser(request);
+    const results = await bulkImportUsers(records, actor);
+    sendJson(response, 200, { ok: true, results });
+  } catch {
+    sendJson(response, 400, { message: "Invalid request body." });
+  }
+}
+
 module.exports = {
   createAdminUser,
   downloadAdminReport,
@@ -190,4 +247,6 @@ module.exports = {
   getAdminSettings,
   updateAdminSettings,
   getAdminFeedbacks,
+  exportAdminDataset,
+  importAdminData,
 };

@@ -96,6 +96,12 @@ button:disabled {
   background-color: #eef2f7;
 }
 
+.sidebar-navbar .nav-links .link-btn.active {
+  background-color: #dbeafe;
+  color: #1d4ed8;
+  font-weight: 600;
+}
+
 .sidebar-navbar .nav-links > button:not(.link-btn) {
   background-color: #111827;
   color: white;

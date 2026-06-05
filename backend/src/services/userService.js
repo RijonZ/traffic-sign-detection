@@ -292,6 +292,31 @@ async function updateProfile(email, { name, password }) {
   return { ok: true, user: formatUser(updated) };
 }
 
+async function bulkImportUsers(records, actor) {
+  const results = { created: 0, skipped: 0, errors: [] };
+
+  for (const record of records) {
+    const { name, email, password, role } = record;
+    if (!name || !email || !password) {
+      results.errors.push({ email: email || "?", reason: "Missing name, email or password." });
+      continue;
+    }
+    try {
+      const result = await createUserByAdmin(name, email, password, role || null, actor);
+      if (result.ok) {
+        results.created++;
+      } else {
+        results.skipped++;
+        results.errors.push({ email, reason: result.message });
+      }
+    } catch {
+      results.errors.push({ email, reason: "Unexpected error during creation." });
+    }
+  }
+
+  return results;
+}
+
 async function forgotPassword(email) {
   const user = await findUserByEmail(email);
   if (!user) return { ok: true }; // don't reveal whether email exists
@@ -384,6 +409,7 @@ module.exports = {
   updateProfile,
   getProfileMeta,
   deleteUser,
+  bulkImportUsers,
   forgotPassword,
   resetPassword,
   revokeLoginSession,

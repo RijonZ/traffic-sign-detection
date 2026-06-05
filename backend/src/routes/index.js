@@ -17,6 +17,8 @@ const {
   getAdminSettings,
   updateAdminSettings,
   getAdminFeedbacks,
+  exportAdminDataset,
+  importAdminData,
 } = require("../controllers/adminController");
 const {
   createDetectSignRequest,
@@ -124,6 +126,8 @@ const routes = [
   { method: "GET", path: /^\/api\/admin\/settings$/, handler: getAdminSettings },
   { method: "PUT", path: /^\/api\/admin\/settings$/, handler: updateAdminSettings },
   { method: "GET", path: /^\/api\/admin\/feedbacks$/, handler: getAdminFeedbacks },
+  { method: "GET", path: /^\/api\/admin\/export$/, handler: exportAdminDataset },
+  { method: "POST", path: /^\/api\/admin\/import$/, handler: importAdminData },
   { method: "GET", path: /^\/api\/manager\/dashboard-analytics$/, handler: getDashboardAnalytics },
   { method: "GET", path: /^\/api\/manager\/export-data$/, handler: getManagerExportData },
   { method: "GET", path: /^\/api\/users\/([^/]+)\/profile$/, handler: getUserProfile },

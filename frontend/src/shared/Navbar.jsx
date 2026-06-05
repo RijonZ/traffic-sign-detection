@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import ChatBot from "./ChatBot";
 import { getSocket } from "../socket/socket";
+import { useApp } from "../context/AppContext";
 
 const API_BASE_URL = "http://localhost:5000/api";
 
@@ -41,6 +42,7 @@ const adminLinks = [
   { label: "Feedbacks", page: "feedbacks" },
   { label: "Model Monitoring", page: "model-monitoring" },
   { label: "Audit Logs", page: "audit-logs" },
+  { label: "Export & Import", page: "export-data" },
   { label: "Settings", page: "settings" },
   { label: "My Profile", page: "profile" },
 ];
@@ -71,6 +73,7 @@ function getLinks(currentUser) {
 }
 
 function Navbar({ currentUser, onLogout, onNavigate }) {
+  const { page: activePage } = useApp();
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const links = getLinks(currentUser);
@@ -157,7 +160,11 @@ function Navbar({ currentUser, onLogout, onNavigate }) {
 
       <div className="nav-links">
         {links.map((link) => (
-          <button className="link-btn" key={link.page} onClick={() => onNavigate(link.page)}>
+          <button
+            className={`link-btn${activePage === link.page ? " active" : ""}`}
+            key={link.page}
+            onClick={() => onNavigate(link.page)}
+          >
             {link.label}
           </button>
         ))}

@@ -1,115 +1,231 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Navbar from "../shared/Navbar";
-import { usePagination, Pagination } from "../shared/Pagination";
-import { statusPillClass } from "../utils/statusUtils";
-import "../styles/auth.css";
-import "../styles/dashboard.css";
-import "../styles/history.css";
-import "../styles/reports.css";
+import "../styles/export.css";
 
 const API_BASE_URL = "http://localhost:5000/api";
 
-const emptySummary = {
-  totalRecords: 0,
-  completed: 0,
-  rejected: 0,
-};
+const DATASETS = [
+  { key: "detections", label: "Detections",  roles: ["Administrator", "Manager"] },
+  { key: "users",      label: "Users",        roles: ["Administrator"] },
+  { key: "reports",    label: "Reports",      roles: ["Administrator", "Manager"] },
+  { key: "audit-logs", label: "Audit Logs",   roles: ["Administrator"] },
+  { key: "feedbacks",  label: "Feedbacks",    roles: ["Administrator", "Manager"] },
+];
+
+const FORMATS = ["csv", "json", "excel"];
+
+const IMPORT_COLUMNS = ["name", "email", "password", "role"];
+
+function parseCsvRow(line) {
+  const values = [];
+  let i = 0;
+  while (i <= line.length) {
+    if (line[i] === '"') {
+      let val = "";
+      i++;
+      while (i < line.length) {
+        if (line[i] === '"' && line[i + 1] === '"') { val += '"'; i += 2; }
+        else if (line[i] === '"') { i++; break; }
+        else { val += line[i++]; }
+      }
+      values.push(val);
+      if (line[i] === ",") i++;
+    } else {
+      const end = line.indexOf(",", i);
+      if (end === -1) { values.push(line.slice(i)); break; }
+      values.push(line.slice(i, end));
+      i = end + 1;
+    }
+  }
+  return values;
+}
+
+function parseCsvText(text) {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+  const headers = parseCsvRow(lines[0]).map((h) => h.trim().toLowerCase());
+  return lines.slice(1).filter(Boolean).map((line) => {
+    const values = parseCsvRow(line);
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = (values[i] ?? "").trim(); });
+    return obj;
+  });
+}
 
 function downloadFile(fileName, content, type) {
-  const fileUrl = URL.createObjectURL(new Blob([content], { type }));
-  const link = document.createElement("a");
-  link.href = fileUrl;
-  link.download = fileName;
-  link.click();
-  URL.revokeObjectURL(fileUrl);
+  const url = URL.createObjectURL(new Blob([content], { type }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
-function toCsv(items) {
-  const columns = ["id", "fileName", "requestedBy", "sign", "category", "confidence", "status", "detectedAt"];
-  const rows = items.map((item) =>
-    columns.map((column) => `"${String(item[column] ?? "").replaceAll('"', '""')}"`).join(",")
+function downloadTemplate() {
+  const header = IMPORT_COLUMNS.join(",");
+  const example = '"John Doe","john@example.com","password123","User"';
+  downloadFile("users-import-template.csv", `${header}\n${example}`, "text/csv");
+}
+
+function PreviewTable({ columns, rows }) {
+  const preview = rows.slice(0, 5);
+  return (
+    <div className="export-table-wrapper" style={{ marginTop: 16 }}>
+      <div className="export-table-title">
+        <span>Preview — first {Math.min(rows.length, 5)} of {rows.length} records</span>
+      </div>
+      <div style={{ overflowX: "auto" }}>
+        <table className="export-table">
+          <thead>
+            <tr>{columns.map((c) => <th key={c}>{c}</th>)}</tr>
+          </thead>
+          <tbody>
+            {preview.map((row, i) => (
+              <tr key={i}>
+                {columns.map((c) => <td key={c}>{String(row[c.toLowerCase()] ?? row[c] ?? "")}</td>)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
-
-  return [columns.join(","), ...rows].join("\n");
 }
 
-function ExportData({ currentUser, onLogout, onNavigate }) {
-  const [detections, setDetections] = useState([]);
-  const [summary, setSummary] = useState(emptySummary);
+export default function ExportData({ currentUser, onLogout, onNavigate }) {
+  const [mode, setMode] = useState("export");
+  const [dataset, setDataset] = useState("detections");
   const [format, setFormat] = useState("csv");
+  const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+
+  // import state
+  const [importFormat, setImportFormat] = useState("csv");
+  const [importRows, setImportRows] = useState([]);
+  const [importFileName, setImportFileName] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState(null);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef();
+
+  const role = currentUser?.role || "";
+  const availableDatasets = DATASETS.filter((d) => d.roles.includes(role));
+  const isAdmin = role === "Administrator";
 
   useEffect(() => {
-    if (!currentUser || currentUser.role !== "Manager") {
-      return;
+    if (!currentUser) return;
+    if (!availableDatasets.find((d) => d.key === dataset)) {
+      setDataset(availableDatasets[0]?.key || "detections");
     }
+  }, [role]);
 
+  useEffect(() => {
+    if (!currentUser || mode !== "export") return;
     setLoading(true);
-    setErrorMessage("");
+    setRows([]);
 
-    fetch(
-      `${API_BASE_URL}/manager/export-data?managerEmail=${encodeURIComponent(
-        currentUser.email
-      )}`
-    )
-      .then((response) => (response.ok ? response.json() : Promise.reject()))
+    const emailParam = `adminEmail=${encodeURIComponent(currentUser.email)}`;
+
+    fetch(`${API_BASE_URL}/admin/export?dataset=${dataset}&format=json&${emailParam}`)
+      .then((r) => r.ok ? r.json() : Promise.reject())
       .then((data) => {
-        setDetections(data.records || []);
-        setSummary(data.summary || emptySummary);
+        const arr = Array.isArray(data) ? data : (data.records || data.logs || data.reports || data.feedbacks || data.users || []);
+        setRows(arr);
       })
-      .catch(() => {
-        setDetections([]);
-        setSummary(emptySummary);
-        setErrorMessage("Could not load export data from the backend.");
-      })
+      .catch(() => setRows([]))
       .finally(() => setLoading(false));
-  }, [currentUser]);
+  }, [dataset, mode, currentUser]);
 
-  const { page, setPage, totalPages, paginatedItems, pageSize } = usePagination(detections);
-
-  function exportData() {
-    if (!detections.length) {
-      return;
-    }
+  function handleExport() {
+    const emailParam = `adminEmail=${encodeURIComponent(currentUser.email)}`;
+    const url = `${API_BASE_URL}/admin/export?dataset=${dataset}&format=${format}&${emailParam}`;
 
     if (format === "json") {
-      downloadFile("traffic-sign-detections.json", JSON.stringify(detections, null, 2), "application/json");
+      const content = JSON.stringify(rows, null, 2);
+      downloadFile(`${dataset}-export.json`, content, "application/json");
       return;
     }
 
-    downloadFile("traffic-sign-detections.csv", toCsv(detections), "text/csv");
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${dataset}-export.${format === "excel" ? "xls" : format}`;
+    link.click();
   }
 
-  if (!currentUser) {
-    return (
-      <div className="home">
-        <Navbar onNavigate={onNavigate} />
-        <main className="page-shell">
-          <section className="auth-card">
-            <h1>Sign in required</h1>
-            <p>You need a manager account before exporting data.</p>
-            <button className="primary-btn" onClick={() => onNavigate("login")}>
-              Go to login
-            </button>
-          </section>
-        </main>
-      </div>
-    );
+  function parseFile(file) {
+    setImportResult(null);
+    setImportRows([]);
+    setImportFileName(file.name);
+
+    const ext = file.name.split(".").pop().toLowerCase();
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      const text = e.target.result;
+      try {
+        if (ext === "json") {
+          const data = JSON.parse(text);
+          setImportRows(Array.isArray(data) ? data : []);
+          setImportFormat("json");
+        } else {
+          setImportRows(parseCsvText(text));
+          setImportFormat("csv");
+        }
+      } catch {
+        setImportResult({ ok: false, message: "Could not parse file. Ensure it is valid CSV or JSON." });
+      }
+    };
+    reader.readAsText(file);
   }
 
-  if (currentUser.role !== "Manager") {
+  function handleFileDrop(e) {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file) parseFile(file);
+  }
+
+  function handleFileSelect(e) {
+    const file = e.target.files[0];
+    if (file) parseFile(file);
+  }
+
+  async function handleImport() {
+    if (!importRows.length) return;
+    setImporting(true);
+    setImportResult(null);
+
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/admin/import?adminEmail=${encodeURIComponent(currentUser.email)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ dataset: "users", records: importRows }),
+        }
+      );
+      const data = await res.json();
+      if (res.ok) {
+        setImportResult({ ok: true, results: data.results });
+      } else {
+        setImportResult({ ok: false, message: data.message });
+      }
+    } catch {
+      setImportResult({ ok: false, message: "Could not connect to server." });
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  const currentDatasetMeta = DATASETS.find((d) => d.key === dataset);
+  const columns = rows.length > 0 ? Object.keys(rows[0]) : [];
+
+  if (!currentUser || (!isAdmin && role !== "Manager")) {
     return (
       <div className="home">
         <Navbar currentUser={currentUser} onLogout={onLogout} onNavigate={onNavigate} />
         <main className="page-shell">
-          <section className="auth-card">
-            <h1>Manager access only</h1>
-            <p>Only managers can export detection data.</p>
-            <button className="secondary-btn" onClick={() => onNavigate("home")}>
-              Back home
-            </button>
-          </section>
+          <p style={{ color: "#b91c1c" }}>Access denied. Manager or Administrator role required.</p>
         </main>
       </div>
     );
@@ -120,82 +236,215 @@ function ExportData({ currentUser, onLogout, onNavigate }) {
       <Navbar currentUser={currentUser} onLogout={onLogout} onNavigate={onNavigate} />
 
       <main className="page-shell">
-        <section className="dashboard-header">
-          <div>
-            <span className="eyebrow">Manager module</span>
-            <h1>Export Data</h1>
-            <p>Download detection records for reports, analysis, or project documentation.</p>
-          </div>
-          <button className="secondary-btn" onClick={() => onNavigate("dashboard-analytics")}>
-            Back to Analytics
+        <div className="export-header">
+          <span className="eyebrow">{isAdmin ? "Administrator module" : "Manager module"}</span>
+          <h1>Export &amp; Import Data</h1>
+          <p>Export platform data in CSV, JSON, or Excel format. Administrators can also import users in bulk.</p>
+        </div>
+
+        <div className="export-mode-tabs">
+          <button
+            className={`export-mode-tab ${mode === "export" ? "active" : ""}`}
+            onClick={() => setMode("export")}
+          >
+            Export Data
           </button>
-        </section>
+          {isAdmin && (
+            <button
+              className={`export-mode-tab ${mode === "import" ? "active" : ""}`}
+              onClick={() => setMode("import")}
+            >
+              Import Users
+            </button>
+          )}
+        </div>
 
-        <section className="history-summary">
-          <div className="dashboard-card">
-            <h3>Total Records</h3>
-            <p>{loading ? "..." : summary.totalRecords}</p>
-          </div>
-          <div className="dashboard-card">
-            <h3>Completed</h3>
-            <p>{loading ? "..." : summary.completed}</p>
-          </div>
-          <div className="dashboard-card">
-            <h3>Rejected</h3>
-            <p>{loading ? "..." : summary.rejected}</p>
-          </div>
-        </section>
-
-        {errorMessage && <p className="auth-error">{errorMessage}</p>}
-
-        <section className="reports-layout">
-          <div className="history-table">
-            <div className="report-row report-head">
-              <p>ID</p>
-              <p>Image</p>
-              <p>Detected Sign</p>
-              <p>Status</p>
-              <p>Confidence</p>
+        {/* ── EXPORT TAB ── */}
+        {mode === "export" && (
+          <>
+            <div className="export-dataset-pills">
+              {availableDatasets.map((d) => (
+                <button
+                  key={d.key}
+                  className={`export-dataset-pill ${dataset === d.key ? "active" : ""}`}
+                  onClick={() => setDataset(d.key)}
+                >
+                  {d.label}
+                </button>
+              ))}
             </div>
 
-            {!loading && detections.length === 0 && (
-              <p style={{ padding: "24px 16px", color: "var(--muted, #888)" }}>
-                No export records are available yet.
-              </p>
-            )}
-
-            {paginatedItems.map((item) => (
-              <div className="report-row" key={item.id}>
-                <p>{item.id}</p>
-                <p>{item.fileName}</p>
-                <p>{item.sign}</p>
-                <p><span className={statusPillClass(item.status)}>{item.status}</span></p>
-                <p>{item.confidence}%</p>
+            <div className="export-layout">
+              {/* Table */}
+              <div>
+                <div className="export-table-wrapper">
+                  <div className="export-table-title">
+                    <span>{currentDatasetMeta?.label}</span>
+                    <span className="export-table-count">{loading ? "…" : `${rows.length} records`}</span>
+                  </div>
+                  {loading ? (
+                    <p className="export-empty">Loading…</p>
+                  ) : rows.length === 0 ? (
+                    <p className="export-empty">No records found.</p>
+                  ) : (
+                    <div className="export-table-scroll">
+                      <table className="export-table">
+                        <thead>
+                          <tr>{columns.map((c) => <th key={c}>{c}</th>)}</tr>
+                        </thead>
+                        <tbody>
+                          {rows.slice(0, 10).map((row, i) => (
+                            <tr key={i}>
+                              {columns.map((c) => (
+                                <td key={c} title={String(row[c] ?? "")}>
+                                  {String(row[c] ?? "")}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {rows.length > 10 && (
+                        <p style={{ color: "#94a3b8", fontSize: 12, padding: "10px 16px", margin: 0 }}>
+                          Showing 10 of {rows.length} — full data exported to file.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
-            ))}
 
-            <Pagination page={page} totalPages={totalPages} total={detections.length} pageSize={pageSize} onPage={setPage} />
+              {/* Sidebar */}
+              <div className="export-sidebar-card">
+                <h3>Download</h3>
+
+                <div className="export-format-group">
+                  <span className="export-format-label">Format</span>
+                  <div className="export-format-options">
+                    {FORMATS.map((f) => (
+                      <button
+                        key={f}
+                        className={`export-format-btn ${format === f ? "active" : ""}`}
+                        onClick={() => setFormat(f)}
+                      >
+                        {f.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="export-stats">
+                  <div className="export-stat-row">
+                    <span>Dataset</span>
+                    <strong>{currentDatasetMeta?.label}</strong>
+                  </div>
+                  <div className="export-stat-row">
+                    <span>Records</span>
+                    <strong>{rows.length}</strong>
+                  </div>
+                  <div className="export-stat-row">
+                    <span>Format</span>
+                    <strong>{format.toUpperCase()}</strong>
+                  </div>
+                </div>
+
+                <button
+                  className="export-btn"
+                  onClick={handleExport}
+                  disabled={rows.length === 0 || loading}
+                >
+                  {loading ? "Loading…" : `Export ${format.toUpperCase()}`}
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ── IMPORT TAB ── */}
+        {mode === "import" && isAdmin && (
+          <div className="import-section">
+            <div>
+              <div
+                className={`import-drop-zone ${dragOver ? "drag-over" : ""}`}
+                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={handleFileDrop}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <svg width="40" height="40" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                  <path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M16 12l-4-4-4 4M12 8v8" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <p>
+                  <strong>Click to upload</strong> or drag &amp; drop<br/>
+                  CSV or JSON file
+                </p>
+                {importFileName && (
+                  <span style={{ fontSize: 12, color: "#2563eb", fontWeight: 600 }}>{importFileName}</span>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv,.json"
+                  className="import-file-input"
+                  onChange={handleFileSelect}
+                />
+              </div>
+
+              {importRows.length > 0 && (
+                <PreviewTable columns={IMPORT_COLUMNS} rows={importRows} />
+              )}
+
+              {importResult && (
+                <div className={`import-result ${importResult.ok ? "import-result--success" : "import-result--error"}`} style={{ marginTop: 16 }}>
+                  {importResult.ok ? (
+                    <>
+                      <strong>Import complete</strong><br />
+                      Created: {importResult.results.created} &nbsp;|&nbsp;
+                      Skipped: {importResult.results.skipped}
+                      {importResult.results.errors.length > 0 && (
+                        <ul className="import-errors-list">
+                          {importResult.results.errors.map((e, i) => (
+                            <li key={i}>{e.email}: {e.reason}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </>
+                  ) : (
+                    <><strong>Import failed</strong><br />{importResult.message}</>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Sidebar */}
+            <div className="export-sidebar-card">
+              <h3>Import Users</h3>
+              <p style={{ fontSize: 13, color: "#64748b", margin: 0, lineHeight: 1.5 }}>
+                Upload a CSV or JSON file to bulk-create user accounts. Required columns:
+              </p>
+              <div style={{ background: "#f1f5f9", borderRadius: 6, padding: "10px 12px", fontSize: 12, color: "#475569", fontFamily: "monospace" }}>
+                name, email, password, role
+              </div>
+              <p style={{ fontSize: 12, color: "#94a3b8", margin: 0 }}>
+                <strong>role</strong> is optional — defaults based on email pattern.
+                Maximum 500 records per import.
+              </p>
+
+              <button className="import-template-btn" onClick={downloadTemplate}>
+                Download CSV Template
+              </button>
+
+              <button
+                className="import-btn"
+                onClick={handleImport}
+                disabled={importRows.length === 0 || importing}
+              >
+                {importing ? "Importing…" : `Import ${importRows.length} User${importRows.length !== 1 ? "s" : ""}`}
+              </button>
+            </div>
           </div>
-
-          <aside className="report-detail">
-            <span className="eyebrow">Export format</span>
-            <h2>Download file</h2>
-            <p>Choose a simple format and export the records shown in the table.</p>
-
-            <label className="field-label" htmlFor="export-format">Format</label>
-            <select id="export-format" value={format} onChange={(event) => setFormat(event.target.value)}>
-              <option value="csv">CSV</option>
-              <option value="json">JSON</option>
-            </select>
-
-            <button className="primary-btn full-width" onClick={exportData} disabled={!detections.length}>
-              {detections.length ? "Export Data" : "No Data to Export"}
-            </button>
-          </aside>
-        </section>
+        )}
       </main>
     </div>
   );
 }
-
-export default ExportData;
