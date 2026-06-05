@@ -2,6 +2,7 @@ const PDFDocument = require("pdfkit");
 const { getUserDetections } = require("./detectionService");
 const { query } = require("../db/client");
 const homeRepo = require("../repositories/homeRepository");
+const userRepo = require("../repositories/userRepository");
 
 function formatReport(item) {
   return {
@@ -18,7 +19,7 @@ function formatReport(item) {
   };
 }
 
-function buildReportPdf(report, allReports = []) {
+function buildReportPdf(report, allReports = [], ownerName = null) {
   return new Promise((resolve) => {
     const doc = new PDFDocument({ size: "A4", margin: 0, bufferPages: true });
     const chunks = [];
@@ -26,207 +27,261 @@ function buildReportPdf(report, allReports = []) {
     doc.on("end", () => resolve(Buffer.concat(chunks)));
 
     const W = 595;
-    const margin = 40;
+    const H = 842;
+    const margin = 44;
     const contentW = W - margin * 2;
 
-    const BLUE = "#2563EB";
+    const BLUE       = "#2563EB";
+    const BLUE_DARK  = "#1D4ED8";
     const BLUE_LIGHT = "#EFF6FF";
-    const BLUE_MID = "#BFDBFE";
-    const DARK = "#1E293B";
-    const MUTED = "#64748B";
-    const GREEN = "#16A34A";
-    const GREEN_BG = "#DCFCE7";
-    const RED = "#DC2626";
-    const RED_BG = "#FEE2E2";
-    const YELLOW = "#D97706";
-    const YELLOW_BG = "#FEF3C7";
-    const GRAY = "#E2E8F0";
-    const WHITE = "#FFFFFF";
+    const BLUE_MID   = "#BFDBFE";
+    const BLUE_PALE  = "#DBEAFE";
+    const DARK       = "#0F172A";
+    const BODY       = "#1E293B";
+    const MUTED      = "#64748B";
+    const BORDER     = "#E2E8F0";
+    const GREEN      = "#16A34A";
+    const GREEN_BG   = "#DCFCE7";
+    const GREEN_DARK = "#14532D";
+    const RED        = "#DC2626";
+    const RED_BG     = "#FEE2E2";
+    const RED_DARK   = "#7F1D1D";
+    const AMBER      = "#D97706";
+    const AMBER_BG   = "#FEF3C7";
+    const AMBER_DARK = "#78350F";
+    const WHITE      = "#FFFFFF";
+    const GRAY_BG    = "#F8FAFC";
 
-    // ── Header ───────────────────────────────────────────────
-    doc.rect(0, 0, W, 115).fill(BLUE);
+    const dateStr = new Date().toLocaleDateString("en-GB", {
+      day: "2-digit", month: "long", year: "numeric",
+    });
 
-    doc.fillColor(WHITE).font("Helvetica-Bold").fontSize(24)
-      .text("Traffic Sign AI", margin, 22, { continued: false });
+    // ── Header band ──────────────────────────────────────────
+    doc.rect(0, 0, W, 130).fill(BLUE);
+    doc.rect(0, 106, W, 24).fill(BLUE_DARK);
 
-    doc.font("Helvetica").fontSize(12).fillColor("#BFDBFE")
-      .text("Detection Report", margin, 52);
+    // Accent circle decoration
+    doc.circle(W - 60, 10, 90).fill(BLUE_DARK).opacity(0.4);
+    doc.opacity(1);
+    doc.circle(W - 20, 70, 50).fill("#1E40AF").opacity(0.3);
+    doc.opacity(1);
 
-    doc.fontSize(9).fillColor("#93C5FD")
-      .text(`Generated: ${new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })}`, margin, 72);
+    // Brand name
+    doc.font("Helvetica-Bold").fontSize(22).fillColor(WHITE)
+      .text("Traffic Sign AI", margin, 26);
 
-    doc.font("Helvetica-Bold").fontSize(11).fillColor(WHITE)
-      .text(report.id, 0, 22, { align: "right", width: W - margin });
+    // Subtitle
+    doc.font("Helvetica").fontSize(11).fillColor(BLUE_MID)
+      .text("Detection Analysis Report", margin, 54);
 
-    // ── Section helper ───────────────────────────────────────
-    let y = 135;
+    // Generated date
+    doc.font("Helvetica").fontSize(8.5).fillColor("#93C5FD")
+      .text(`Generated  ${dateStr}`, margin, 74);
 
-    function sectionTitle(title) {
-      doc.font("Helvetica-Bold").fontSize(10).fillColor(BLUE)
-        .text(title.toUpperCase(), margin, y);
-      y += 14;
-      doc.rect(margin, y, contentW, 1).fill(BLUE_MID);
+    // Report ID badge on right side
+    const badgeText = report.id;
+    const badgeX = W - margin - 158;
+    doc.rect(badgeX, 28, 158, 28).fill("#1E40AF");
+    doc.font("Helvetica-Bold").fontSize(7.5).fillColor(WHITE)
+      .text(badgeText, badgeX, 39, { width: 158, align: "center", lineBreak: false });
+
+    // Sub-band label
+    doc.font("Helvetica").fontSize(8).fillColor(BLUE_PALE)
+      .text("CONFIDENTIAL  ·  INTERNAL USE ONLY", margin, 113, { characterSpacing: 0.8 });
+
+    // ── Body ─────────────────────────────────────────────────
+    let y = 150;
+
+    function sectionLabel(title) {
+      doc.rect(margin, y, 3, 14).fill(BLUE);
+      doc.font("Helvetica-Bold").fontSize(9).fillColor(BLUE)
+        .text(title.toUpperCase(), margin + 10, y + 1, { characterSpacing: 0.6 });
+      y += 20;
+      doc.rect(margin, y, contentW, 0.5).fill(BORDER);
       y += 10;
     }
 
-    function row(label, value, valueColor) {
-      doc.font("Helvetica-Bold").fontSize(10).fillColor(MUTED)
-        .text(label, margin, y, { width: 140, continued: false });
-      doc.font("Helvetica").fontSize(10).fillColor(valueColor || DARK)
-        .text(String(value ?? "—"), margin + 145, y, { width: contentW - 145 });
-      y += 20;
+    function infoRow(label, value, valueColor) {
+      doc.font("Helvetica").fontSize(9).fillColor(MUTED)
+        .text(label, margin + 8, y, { width: 130 });
+      doc.font("Helvetica-Bold").fontSize(9.5).fillColor(valueColor || BODY)
+        .text(String(value ?? "—"), margin + 145, y, { width: contentW - 150 });
+      y += 22;
     }
 
-    function gap(n = 16) { y += n; }
+    function gap(n = 14) { y += n; }
 
-    // ── Report Information ───────────────────────────────────
-    doc.rect(margin, y - 6, contentW, 130).fill(BLUE_LIGHT).stroke(BLUE_LIGHT);
-    y += 4;
-    sectionTitle("Report Information");
+    // ── Info card ────────────────────────────────────────────
+    doc.rect(margin, y, contentW, 148).fill(GRAY_BG);
+    doc.rect(margin, y, contentW, 148).stroke(BORDER).lineWidth(0.5);
+    y += 14;
 
-    row("Report ID", report.id);
-    row("Requested by", report.requestedBy || report.userEmail);
-    row("Image file", report.fileName);
-    row("Date", report.createdAt
+    sectionLabel("Report Details");
+
+    infoRow("Report ID",     report.id);
+    infoRow("Requested by",  report.requestedBy || report.userEmail || "—");
+    infoRow("Image file",    report.fileName    || "—");
+    infoRow("Date created",  report.createdAt
       ? new Date(report.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })
       : "—");
 
-    gap(26);
+    gap(20);
 
-    // ── Detection Result ─────────────────────────────────────
-    sectionTitle("Detection Result");
+    // ── Detection result card ─────────────────────────────────
+    doc.rect(margin, y, contentW, 185).fill(GRAY_BG);
+    doc.rect(margin, y, contentW, 185).stroke(BORDER).lineWidth(0.5);
+    y += 14;
 
-    row("Detected sign", report.sign);
-    row("Category", report.category);
+    sectionLabel("Detection Result");
 
-    // Status pill
-    doc.font("Helvetica-Bold").fontSize(10).fillColor(MUTED)
-      .text("Status", margin, y, { width: 140 });
+    infoRow("Detected sign", report.sign     || "—");
+    infoRow("Category",      report.category || "—");
 
-    const status = String(report.status || "");
-    const pillColor = status === "Completed" ? GREEN : status === "Rejected" ? RED : YELLOW;
-    const pillBg   = status === "Completed" ? GREEN_BG : status === "Rejected" ? RED_BG : YELLOW_BG;
-    const pillW = 80;
-    const pillH = 16;
-    const pillX = margin + 145;
-    doc.rect(pillX, y - 1, pillW, pillH).fill(pillBg);
-    doc.font("Helvetica-Bold").fontSize(9).fillColor(pillColor)
-      .text(status || "Unknown", pillX, y + 2, { width: pillW, align: "center" });
-    y += 22;
+    // Status badge
+    const status    = String(report.status || "Unknown");
+    const isOk      = status === "Completed";
+    const isRej     = status === "Rejected";
+    const pillColor = isOk ? GREEN      : isRej ? RED      : AMBER;
+    const pillBg    = isOk ? GREEN_BG   : isRej ? RED_BG   : AMBER_BG;
+    const pillText  = isOk ? GREEN_DARK : isRej ? RED_DARK : AMBER_DARK;
+    const pillW     = 72;
+    const pillH     = 17;
+    const pillX     = margin + 145;
 
-    gap(10);
+    doc.font("Helvetica").fontSize(9).fillColor(MUTED)
+      .text("Status", margin + 8, y, { width: 130 });
+    doc.rect(pillX, y - 2, pillW, pillH).fill(pillBg);
+    doc.rect(pillX, y - 2, pillW, pillH).stroke(pillColor).lineWidth(0.4);
+    doc.font("Helvetica-Bold").fontSize(8.5).fillColor(pillText)
+      .text(status, pillX, y + 2, { width: pillW, align: "center" });
+    y += 24;
+
+    gap(8);
 
     // Confidence bar
     const confidence = Number(report.confidence || 0);
-    doc.font("Helvetica-Bold").fontSize(10).fillColor(MUTED)
-      .text("Confidence", margin, y);
-    y += 16;
+    const barColor   = confidence >= 80 ? GREEN : confidence >= 50 ? AMBER : RED;
+    const barH       = 18;
+    const barW       = 310;
+    const fillW      = Math.max(0, Math.round((confidence / 100) * barW));
 
-    const barH = 14;
-    const barW = contentW;
-    doc.rect(margin, y, barW, barH).fill(GRAY);
-    const fillW = Math.round((confidence / 100) * barW);
-    const barColor = confidence >= 80 ? GREEN : confidence >= 50 ? YELLOW : RED;
+    doc.font("Helvetica").fontSize(9).fillColor(MUTED)
+      .text("Confidence score", margin + 8, y + 4, { width: 130 });
+
+    doc.rect(margin + 145, y, barW, barH).fill(BORDER);
     if (fillW > 0) {
-      doc.rect(margin, y, fillW, barH).fill(barColor);
+      doc.rect(margin + 145, y, fillW, barH).fill(barColor);
     }
-    doc.font("Helvetica-Bold").fontSize(9).fillColor(DARK)
-      .text(`${confidence}%`, margin + barW + 6, y + 2);
-    y += barH + 20;
+    doc.font("Helvetica-Bold").fontSize(9).fillColor(barColor)
+      .text(`${confidence}%`, margin + 145 + barW + 6, y + 4, { lineBreak: false });
 
-    gap(6);
+    y += barH + 26;
 
-    // ── User Statistics ──────────────────────────────────────
+    // ── Statistics cards ─────────────────────────────────────
     if (allReports.length > 0) {
-      sectionTitle("Your Detection Statistics");
+      sectionLabel(ownerName ? `${ownerName}'s Statistics` : "Your Account Statistics");
 
-      const total = allReports.length;
+      const total     = allReports.length;
       const completed = allReports.filter((r) => r.status === "Completed").length;
-      const rejected = allReports.filter((r) => r.status === "Rejected").length;
-      const avgConf = total
+      const rejected  = allReports.filter((r) => r.status === "Rejected").length;
+      const avgConf   = total
         ? Math.round(allReports.reduce((s, r) => s + Number(r.confidence || 0), 0) / total)
         : 0;
 
       const cards = [
-        { label: "Total Reports", value: String(total), color: BLUE, bg: BLUE_LIGHT },
-        { label: "Completed", value: String(completed), color: GREEN, bg: GREEN_BG },
-        { label: "Rejected", value: String(rejected), color: RED, bg: RED_BG },
-        { label: "Avg. Confidence", value: `${avgConf}%`, color: YELLOW, bg: YELLOW_BG },
+        { label: "Total Reports",   value: String(total),     color: BLUE,  bg: BLUE_LIGHT,  border: BLUE_MID  },
+        { label: "Completed",       value: String(completed), color: GREEN, bg: GREEN_BG,    border: GREEN      },
+        { label: "Rejected",        value: String(rejected),  color: RED,   bg: RED_BG,      border: RED        },
+        { label: "Avg. Confidence", value: `${avgConf}%`,     color: AMBER, bg: AMBER_BG,    border: AMBER      },
       ];
 
-      const cardW = Math.floor((contentW - 12) / 4);
-      const cardH = 56;
+      const gap4  = 8;
+      const cardW = Math.floor((contentW - gap4 * 3) / 4);
+      const cardH = 64;
+
       cards.forEach((card, i) => {
-        const cx = margin + i * (cardW + 4);
+        const cx = margin + i * (cardW + gap4);
         doc.rect(cx, y, cardW, cardH).fill(card.bg);
-        doc.font("Helvetica-Bold").fontSize(18).fillColor(card.color)
-          .text(card.value, cx, y + 10, { width: cardW, align: "center" });
-        doc.font("Helvetica").fontSize(8).fillColor(MUTED)
-          .text(card.label, cx, y + 34, { width: cardW, align: "center" });
+        doc.rect(cx, y, cardW, cardH).stroke(card.border).lineWidth(0.5);
+        doc.rect(cx, y, cardW, 3).fill(card.color);
+
+        doc.font("Helvetica-Bold").fontSize(22).fillColor(card.color)
+          .text(card.value, cx, y + 14, { width: cardW, align: "center" });
+        doc.font("Helvetica").fontSize(7.5).fillColor(MUTED)
+          .text(card.label, cx, y + 44, { width: cardW, align: "center" });
       });
 
       y += cardH + 24;
     }
 
-    // ── Recent detections mini-table ─────────────────────────
+    // ── Recent detections table ───────────────────────────────
     if (allReports.length > 1) {
-      const recent = allReports.slice(0, 5);
-      sectionTitle("Recent Detections");
+      const recent = allReports.slice(0, 3);
+      sectionLabel("Recent Detections");
 
       const cols = [
-        { label: "Report ID", w: 115 },
-        { label: "Sign", w: 150 },
-        { label: "Confidence", w: 75 },
-        { label: "Status", w: 75 },
-        { label: "Date", w: contentW - 415 },
+        { label: "Report ID",  w: 130 },
+        { label: "Sign",       w: 130 },
+        { label: "Confidence", w: 75  },
+        { label: "Status",     w: 75  },
+        { label: "Date",       w: contentW - 410 },
       ];
 
-      function truncate(str, max) {
+      function trunc(str, max) {
         const s = String(str ?? "—");
         return s.length > max ? s.slice(0, max - 1) + "…" : s;
       }
 
-      // Table header
-      doc.rect(margin, y, contentW, 18).fill(BLUE);
-      let tx = margin + 6;
+      // thead
+      doc.rect(margin, y, contentW, 20).fill(BLUE);
+      let tx = margin + 8;
       cols.forEach((col) => {
-        doc.font("Helvetica-Bold").fontSize(9).fillColor(WHITE)
-          .text(col.label, tx, y + 4, { width: col.w - 6, lineBreak: false });
+        doc.font("Helvetica-Bold").fontSize(8.5).fillColor(WHITE)
+          .text(col.label, tx, y + 5, { width: col.w - 8, lineBreak: false });
         tx += col.w;
       });
-      y += 18;
+      y += 20;
 
+      // tbody
       recent.forEach((r, idx) => {
         const rowBg = idx % 2 === 0 ? WHITE : BLUE_LIGHT;
-        doc.rect(margin, y, contentW, 18).fill(rowBg);
-        tx = margin + 6;
-        const cells = [
-          truncate(r.id, 16),
-          truncate(r.sign, 22),
-          `${r.confidence}%`,
-          r.status,
-          r.createdAt ? new Date(r.createdAt).toLocaleDateString("en-GB") : "—",
+        doc.rect(margin, y, contentW, 20).fill(rowBg);
+        doc.rect(margin, y, contentW, 20).stroke(BORDER).lineWidth(0.3);
+        tx = margin + 8;
+
+        const sColor = r.status === "Completed" ? GREEN : r.status === "Rejected" ? RED : AMBER;
+        const cells  = [
+          { text: trunc(r.id, 19),          color: BODY  },
+          { text: trunc(r.sign, 20),        color: BODY  },
+          { text: `${r.confidence || 0}%`,  color: BODY  },
+          { text: r.status || "—",          color: sColor },
+          { text: r.createdAt ? new Date(r.createdAt).toLocaleDateString("en-GB") : "—", color: MUTED },
         ];
+
         cells.forEach((cell, ci) => {
-          doc.font("Helvetica").fontSize(9).fillColor(DARK)
-            .text(String(cell ?? "—"), tx, y + 4, { width: cols[ci].w - 6, lineBreak: false });
+          doc.font(ci === 3 ? "Helvetica-Bold" : "Helvetica").fontSize(8.5)
+            .fillColor(cell.color)
+            .text(cell.text, tx, y + 5, { width: cols[ci].w - 8, lineBreak: false });
           tx += cols[ci].w;
         });
-        y += 18;
+        y += 20;
       });
 
-      y += 12;
+      y += 10;
     }
 
     // ── Footer ───────────────────────────────────────────────
-    const footerY = 820;
-    doc.rect(0, footerY, W, 22).fill(BLUE);
-    doc.font("Helvetica").fontSize(8).fillColor(WHITE)
-      .text("Traffic Sign AI  —  Confidential document. For internal use only.", margin, footerY + 7, {
-        width: contentW - 60,
-      });
+    const footerY = H - 36;
+    doc.rect(0, footerY, W, 36).fill(DARK);
+    doc.rect(0, footerY, W, 2).fill(BLUE);
+
+    doc.font("Helvetica").fontSize(7.5).fillColor("#94A3B8")
+      .text("Traffic Sign AI  ·  Automated traffic sign detection platform", margin, footerY + 10);
+    doc.font("Helvetica").fontSize(7.5).fillColor("#94A3B8")
+      .text(`${report.id}  ·  ${dateStr}`, margin, footerY + 22);
+
     doc.font("Helvetica-Bold").fontSize(8).fillColor(WHITE)
-      .text("Page 1", 0, footerY + 7, { align: "right", width: W - margin });
+      .text("Page 1 of 1", 0, footerY + 14, { align: "right", width: W - margin });
 
     doc.end();
   });
@@ -250,6 +305,7 @@ async function getUserReportPdf(email, reportId) {
     pdf: await buildReportPdf(report, reports),
   };
 }
+
 
 function reportMatchesFilters(report, filters = {}) {
   const status = String(filters.status || "").trim();
@@ -335,9 +391,20 @@ async function getReportPdfById(reportId, filters = {}) {
 
   await saveReportMetadata(report);
 
+  const userEmail = report.userEmail || report.requestedBy;
+  const userReports = userEmail ? await getUserReports(userEmail) : [];
+
+  let ownerName = null;
+  if (userEmail) {
+    const userRecord = await userRepo.findByEmail(userEmail);
+    if (userRecord) {
+      ownerName = `${userRecord.first_name} ${userRecord.last_name}`.trim();
+    }
+  }
+
   return {
     fileName: `${report.id.toLowerCase()}-traffic-sign-report.pdf`,
-    pdf: buildReportPdf(report),
+    pdf: await buildReportPdf(report, userReports, ownerName),
   };
 }
 

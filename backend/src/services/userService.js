@@ -110,18 +110,8 @@ async function createUserAccount(name, email, password) {
   const { accessToken, refreshToken } = await createLoginSession(newUser.id, email, roleName);
   const { createNotificationForEmail, notifyRoles } = require("./notificationService");
 
-  await createNotificationForEmail(
-    email,
-    "account",
-    "Account created",
-    "Your Traffic Sign AI account is ready."
-  );
-  await notifyRoles(
-    ["Administrator"],
-    "new-user",
-    "New user registered",
-    `${email} created a new account.`
-  );
+  await createNotificationForEmail(email, "account", "Account created", "Your Traffic Sign AI account is ready.");
+  await notifyRoles(["Administrator"], "new-user", "New user registered", `${email} created a new account.`);
   await recordAuditLog({
     userId: newUser.id,
     action: "User signed up",
@@ -319,7 +309,7 @@ async function bulkImportUsers(records, actor) {
 
 async function forgotPassword(email) {
   const user = await findUserByEmail(email);
-  if (!user) return { ok: true }; // don't reveal whether email exists
+  if (!user) return { ok: false, message: "No account found with this email address." };
 
   const { sendResetEmail } = require("./emailService");
   const token = crypto.randomBytes(32).toString("hex");
@@ -338,6 +328,15 @@ async function resetPassword(token, newPassword) {
 
   if (!record) {
     return { ok: false, message: "This reset link is invalid or has expired." };
+  }
+
+  const meta = await userRepo.getProfileCooldowns(record.user_id);
+  const lockedUntil = cooldownUntil(meta?.password_changed_at, PASSWORD_COOLDOWN_DAYS);
+  if (lockedUntil) {
+    return {
+      ok: false,
+      message: `You can only change your password once every 30 days. Try again in ${daysLeftLabel(lockedUntil)}.`,
+    };
   }
 
   await userRepo.updatePassword(record.user_id, await bcrypt.hash(newPassword, BCRYPT_ROUNDS));

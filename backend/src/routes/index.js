@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const express = require("express");
 const { login, logout, signup, refresh, forgotPasswordHandler, resetPasswordHandler } = require("../controllers/authController");
 const { sendMessage } = require("../controllers/chatController");
 const {
@@ -57,112 +58,100 @@ const {
 const { postFeedback, getFeedback, getMyFeedbacks } = require("../controllers/feedbackController");
 const { getPermissionsForRole } = require("../services/permissionService");
 const { findUserByEmail } = require("../services/userService");
-const { sendJson, sendOptions, notFound } = require("../utils/http");
+const { sendJson } = require("../utils/http");
 
-const routes = [
-  { method: "GET", path: /^\/api\/health$/, handler: (_, response) => sendJson(response, 200, { ok: true }) },
-  {
-    method: "GET",
-    path: /^\/api\/docs$/,
-    handler: (_, response) => {
-      const html = fs.readFileSync(path.join(__dirname, "../../docs/swagger.html"), "utf8");
-      response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-      response.end(html);
-    },
-  },
-  {
-    method: "GET",
-    path: /^\/api\/docs\/spec$/,
-    handler: (_, response) => {
-      const spec = fs.readFileSync(path.join(__dirname, "../../docs/openapi.json"), "utf8");
-      response.writeHead(200, { "Content-Type": "application/json" });
-      response.end(spec);
-    },
-  },
-  {
-    method: "GET",
-    path: /^\/api\/permissions$/,
-    handler: async (request, response) => {
-      const url = new URL(request.url, `http://${request.headers.host}`);
-      const email = url.searchParams.get("email") || "";
-      const user = await findUserByEmail(email);
-      if (!user) {
-        sendJson(response, 404, { error: "User not found." });
-        return;
-      }
-      const permissions = await getPermissionsForRole(user.role);
-      sendJson(response, 200, { email: user.email, role: user.role, permissions });
-    },
-  },
-  { method: "GET", path: /^\/api\/home$/, handler: getHome },
-  { method: "POST", path: /^\/api\/auth\/login$/, handler: login },
-  { method: "POST", path: /^\/api\/auth\/signup$/, handler: signup },
-  { method: "POST", path: /^\/api\/auth\/logout$/, handler: logout },
-  { method: "POST", path: /^\/api\/auth\/refresh$/, handler: refresh },
-  { method: "POST", path: /^\/api\/auth\/forgot-password$/, handler: forgotPasswordHandler },
-  { method: "POST", path: /^\/api\/auth\/reset-password$/, handler: resetPasswordHandler },
-  { method: "POST", path: /^\/api\/chat$/, handler: sendMessage },
-  { method: "GET", path: /^\/api\/payments\/subscription$/, handler: getSubscription },
-  { method: "POST", path: /^\/api\/payments\/basic-plan$/, handler: activateBasicPlan },
-  { method: "POST", path: /^\/api\/payments\/demo-plan$/, handler: activateDemoPlan },
-  { method: "POST", path: /^\/api\/payments\/create-checkout-session$/, handler: createStripeCheckoutSession },
-  { method: "POST", path: /^\/api\/payments\/confirm-checkout-session$/, handler: confirmStripeCheckoutSession },
-  { method: "GET", path: /^\/api\/detect-sign$/, handler: getDetectionHistory },
-  { method: "POST", path: /^\/api\/detect-sign$/, handler: createDetectSignRequest },
-  { method: "GET", path: /^\/api\/detect-sign\/feedbacks$/, handler: getMyFeedbacks },
-  { method: "POST", path: /^\/api\/detect-sign\/([^/]+)\/feedback$/, handler: postFeedback },
-  { method: "GET", path: /^\/api\/detect-sign\/([^/]+)\/feedback$/, handler: getFeedback },
-  { method: "GET", path: /^\/api\/admin\/model-monitoring$/, handler: getModelMonitoring },
-  { method: "GET", path: /^\/api\/admin\/audit-logs$/, handler: getAdminAuditLogs },
-  { method: "GET", path: /^\/api\/admin\/dashboard$/, handler: getAdminDashboardSummary },
-  { method: "GET", path: /^\/api\/admin\/detections$/, handler: getAdminDetections },
-  { method: "GET", path: /^\/api\/admin\/reports\/export$/, handler: exportAdminReports },
-  { method: "GET", path: /^\/api\/admin\/reports\/([^/]+)\/pdf$/, handler: downloadAdminReport },
-  { method: "GET", path: /^\/api\/admin\/reports$/, handler: getAdminReports },
-  { method: "GET",  path: /^\/api\/admin\/users$/, handler: getAdminUsers },
-  { method: "POST", path: /^\/api\/admin\/users$/, handler: createAdminUser },
-  { method: "PUT",  path: /^\/api\/admin\/users\/([^/]+)$/, handler: updateAdminUser },
-  { method: "DELETE", path: /^\/api\/admin\/users\/([^/]+)$/, handler: deleteAdminUser },
-  { method: "GET", path: /^\/api\/admin\/settings$/, handler: getAdminSettings },
-  { method: "PUT", path: /^\/api\/admin\/settings$/, handler: updateAdminSettings },
-  { method: "GET", path: /^\/api\/admin\/feedbacks$/, handler: getAdminFeedbacks },
-  { method: "GET", path: /^\/api\/admin\/export$/, handler: exportAdminDataset },
-  { method: "POST", path: /^\/api\/admin\/import$/, handler: importAdminData },
-  { method: "GET", path: /^\/api\/manager\/dashboard-analytics$/, handler: getDashboardAnalytics },
-  { method: "GET", path: /^\/api\/manager\/export-data$/, handler: getManagerExportData },
-  { method: "GET", path: /^\/api\/users\/([^/]+)\/profile$/, handler: getUserProfile },
-  { method: "PUT", path: /^\/api\/users\/([^/]+)\/profile$/, handler: updateUserProfile },
-  { method: "GET", path: /^\/api\/users\/([^/]+)\/subscription$/, handler: getUserSubscription },
-  { method: "DELETE", path: /^\/api\/users\/([^/]+)\/subscription$/, handler: cancelUserSubscription },
-  { method: "GET", path: /^\/api\/users\/([^/]+)\/dashboard$/, handler: getDashboard },
-  { method: "GET", path: /^\/api\/users\/([^/]+)\/detections$/, handler: getDetections },
-  { method: "POST", path: /^\/api\/users\/([^/]+)\/detections$/, handler: createDetection },
-  { method: "GET", path: /^\/api\/users\/([^/]+)\/reports\/([^/]+)\/pdf$/, handler: downloadReport },
-  { method: "GET", path: /^\/api\/users\/([^/]+)\/reports$/, handler: getReports },
-  { method: "GET",    path: /^\/api\/users\/([^/]+)\/notifications$/,            handler: getNotifications },
-  { method: "POST",   path: /^\/api\/users\/([^/]+)\/notifications\/read$/,      handler: markAsRead },
-  { method: "POST",   path: /^\/api\/users\/([^/]+)\/notifications\/read-all$/,  handler: markAllAsRead },
-  { method: "DELETE", path: /^\/api\/users\/([^/]+)\/notifications\/one$/,       handler: deleteOne },
-  { method: "DELETE", path: /^\/api\/users\/([^/]+)\/notifications\/read$/,      handler: deleteRead },
-  { method: "DELETE", path: /^\/api\/users\/([^/]+)\/notifications\/all$/,       handler: deleteAll },
-];
+const router = express.Router();
 
-function handleRequest(request, response) {
-  if (request.method === "OPTIONS") {
-    sendOptions(response);
+// Health
+router.get("/health", (req, res) => res.json({ ok: true }));
+
+// Docs
+router.get("/docs", (req, res) => {
+  const html = fs.readFileSync(path.join(__dirname, "../../docs/swagger.html"), "utf8");
+  res.set("Content-Type", "text/html; charset=utf-8").send(html);
+});
+router.get("/docs/spec", (req, res) => {
+  const spec = fs.readFileSync(path.join(__dirname, "../../docs/openapi.json"), "utf8");
+  res.set("Content-Type", "application/json").send(spec);
+});
+
+// Permissions
+router.get("/permissions", async (req, res) => {
+  const email = req.query.email || "";
+  const user = await findUserByEmail(email);
+  if (!user) {
+    sendJson(res, 404, { error: "User not found." });
     return;
   }
+  const permissions = await getPermissionsForRole(user.role);
+  sendJson(res, 200, { email: user.email, role: user.role, permissions });
+});
 
-  const url = new URL(request.url, `http://${request.headers.host}`);
-  const route = routes.find((item) => item.method === request.method && item.path.test(url.pathname));
+// Home
+router.get("/home", getHome);
 
-  if (!route) {
-    notFound(response);
-    return;
-  }
+// Auth
+router.post("/auth/login", login);
+router.post("/auth/signup", signup);
+router.post("/auth/logout", logout);
+router.post("/auth/refresh", refresh);
+router.post("/auth/forgot-password", forgotPasswordHandler);
+router.post("/auth/reset-password", resetPasswordHandler);
 
-  const params = url.pathname.match(route.path).slice(1).map(decodeURIComponent);
-  route.handler(request, response, params);
-}
+// Chat
+router.post("/chat", sendMessage);
 
-module.exports = { handleRequest };
+// Payments
+router.get("/payments/subscription", getSubscription);
+router.post("/payments/basic-plan", activateBasicPlan);
+router.post("/payments/demo-plan", activateDemoPlan);
+router.post("/payments/create-checkout-session", createStripeCheckoutSession);
+router.post("/payments/confirm-checkout-session", confirmStripeCheckoutSession);
+
+// Detect Sign
+router.get("/detect-sign", getDetectionHistory);
+router.post("/detect-sign", createDetectSignRequest);
+router.get("/detect-sign/feedbacks", getMyFeedbacks);
+router.post("/detect-sign/:id/feedback", postFeedback);
+router.get("/detect-sign/:id/feedback", getFeedback);
+
+// Admin
+router.get("/admin/model-monitoring", getModelMonitoring);
+router.get("/admin/audit-logs", getAdminAuditLogs);
+router.get("/admin/dashboard", getAdminDashboardSummary);
+router.get("/admin/detections", getAdminDetections);
+router.get("/admin/reports/export", exportAdminReports);
+router.get("/admin/reports/:id/pdf", downloadAdminReport);
+router.get("/admin/reports", getAdminReports);
+router.get("/admin/users", getAdminUsers);
+router.post("/admin/users", createAdminUser);
+router.put("/admin/users/:id", updateAdminUser);
+router.delete("/admin/users/:id", deleteAdminUser);
+router.get("/admin/settings", getAdminSettings);
+router.put("/admin/settings", updateAdminSettings);
+router.get("/admin/feedbacks", getAdminFeedbacks);
+router.get("/admin/export", exportAdminDataset);
+router.post("/admin/import", importAdminData);
+
+// Manager
+router.get("/manager/dashboard-analytics", getDashboardAnalytics);
+router.get("/manager/export-data", getManagerExportData);
+
+// Users
+router.get("/users/:email/profile", getUserProfile);
+router.put("/users/:email/profile", updateUserProfile);
+router.get("/users/:email/subscription", getUserSubscription);
+router.delete("/users/:email/subscription", cancelUserSubscription);
+router.get("/users/:email/dashboard", getDashboard);
+router.get("/users/:email/detections", getDetections);
+router.post("/users/:email/detections", createDetection);
+router.get("/users/:email/reports/:id/pdf", downloadReport);
+router.get("/users/:email/reports", getReports);
+router.get("/users/:email/notifications", getNotifications);
+router.post("/users/:email/notifications/read", markAsRead);
+router.post("/users/:email/notifications/read-all", markAllAsRead);
+router.delete("/users/:email/notifications/one", deleteOne);
+router.delete("/users/:email/notifications/read", deleteRead);
+router.delete("/users/:email/notifications/all", deleteAll);
+
+module.exports = { router };

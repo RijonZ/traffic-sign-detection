@@ -174,7 +174,7 @@ function LoginPage({ currentUser, onLogin, onLogout, onNavigate, onSignUp, initi
                     </div>
                     <button
                       className="primary-btn full-width"
-                      onClick={() => onNavigate("login")}
+                      onClick={() => { showLogin(); onNavigate("login"); }}
                       type="button"
                     >
                       Go to sign in

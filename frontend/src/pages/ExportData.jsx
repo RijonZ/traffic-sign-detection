@@ -148,7 +148,7 @@ export default function ExportData({ currentUser, onLogout, onNavigate }) {
 
     const link = document.createElement("a");
     link.href = url;
-    link.download = `${dataset}-export.${format === "excel" ? "xls" : format}`;
+    link.download = `${dataset}-export.${format === "excel" ? "xlsx" : format}`;
     link.click();
   }
 

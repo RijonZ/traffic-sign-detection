@@ -209,14 +209,27 @@ function DetectSignPage({ currentUser, onLogout, onNavigate }) {
   }
 
   function downloadReport() {
-    if (!result) {
-      return;
-    }
+    if (!result) return;
 
-    downloadReportPdf(
-      { ...result, user: result.requestedBy, status: "Completed" },
-      "traffic-sign-report.pdf"
-    );
+    const reportId = `REP-${result.id}`;
+    const email = currentUser?.email;
+
+    fetch(`${API_BASE_URL}/users/${encodeURIComponent(email)}/reports/${encodeURIComponent(reportId)}/pdf`)
+      .then((response) => (response.ok ? response.blob() : Promise.reject()))
+      .then((blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "traffic-sign-report.pdf";
+        a.click();
+        URL.revokeObjectURL(url);
+      })
+      .catch(() => {
+        downloadReportPdf(
+          { ...result, user: result.requestedBy, status: "Completed" },
+          "traffic-sign-report.pdf"
+        );
+      });
   }
 
   if (!currentUser) {

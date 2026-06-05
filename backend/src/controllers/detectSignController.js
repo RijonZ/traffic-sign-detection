@@ -1,48 +1,37 @@
 const { detectSign, getUserDetections } = require("../services/detectionService");
 const { findUserByEmail } = require("../services/userService");
-const { readBody, sendJson } = require("../utils/http");
+const { sendJson } = require("../utils/http");
 
-function getEmailFromQuery(request) {
-  const url = new URL(request.url, `http://${request.headers.host}`);
-  return url.searchParams.get("userEmail") || "";
+function sendUserNotFound(res) {
+  sendJson(res, 404, { message: "User not found." });
 }
 
-function sendUserNotFound(response) {
-  sendJson(response, 404, { message: "User not found." });
-}
-
-async function getDetectionHistory(request, response) {
-  const userEmail = getEmailFromQuery(request);
+async function getDetectionHistory(req, res) {
+  const userEmail = req.query.userEmail || "";
 
   if (!(await findUserByEmail(userEmail))) {
-    sendUserNotFound(response);
+    sendUserNotFound(res);
     return;
   }
 
-  sendJson(response, 200, {
+  sendJson(res, 200, {
     detections: await getUserDetections(userEmail),
   });
 }
 
-async function createDetectSignRequest(request, response) {
+async function createDetectSignRequest(req, res) {
   try {
-    const body = await readBody(request);
-    const userEmail = body.userEmail || "";
+    const { userEmail, fileName, fileType, fileSize } = req.body;
 
-    if (!(await findUserByEmail(userEmail))) {
-      sendUserNotFound(response);
+    if (!(await findUserByEmail(userEmail || ""))) {
+      sendUserNotFound(res);
       return;
     }
 
-    const result = await detectSign(userEmail, {
-      fileName: body.fileName,
-      fileType: body.fileType,
-      fileSize: body.fileSize,
-    });
-
-    sendJson(response, result.ok ? 201 : 422, result);
-  } catch (error) {
-    sendJson(response, 400, { message: "Invalid request body." });
+    const result = await detectSign(userEmail, { fileName, fileType, fileSize });
+    sendJson(res, result.ok ? 201 : 422, result);
+  } catch {
+    sendJson(res, 400, { message: "Invalid request body." });
   }
 }
 

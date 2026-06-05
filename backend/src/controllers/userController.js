@@ -1,23 +1,23 @@
 const { updateProfile, getProfileMeta } = require("../services/userService");
-const { sendJson, readBody } = require("../utils/http");
+const { sendJson } = require("../utils/http");
 
-async function getUserProfile(request, response, params) {
-  const email = decodeURIComponent(params[0]);
+async function getUserProfile(req, res) {
+  const email = decodeURIComponent(req.params.email);
   const meta = await getProfileMeta(email);
   if (!meta) {
-    sendJson(response, 404, { message: "User not found." });
+    sendJson(res, 404, { message: "User not found." });
     return;
   }
-  sendJson(response, 200, meta);
+  sendJson(res, 200, meta);
 }
 
-async function updateUserProfile(request, response, params) {
-  const email = decodeURIComponent(params[0]);
+async function updateUserProfile(req, res) {
+  const email = decodeURIComponent(req.params.email);
   try {
-    const { name, password } = await readBody(request);
+    const { name, password } = req.body;
 
     if (!name && !password) {
-      sendJson(response, 400, { message: "Provide name or password to update." });
+      sendJson(res, 400, { message: "Provide name or password to update." });
       return;
     }
 
@@ -27,7 +27,7 @@ async function updateUserProfile(request, response, params) {
 
     const result = await updateProfile(email, updates);
     if (!result.ok) {
-      sendJson(response, 429, {
+      sendJson(res, 429, {
         message: result.message,
         field: result.field,
         lockedUntil: result.lockedUntil,
@@ -35,9 +35,9 @@ async function updateUserProfile(request, response, params) {
       return;
     }
 
-    sendJson(response, 200, { ok: true, user: result.user });
+    sendJson(res, 200, { ok: true, user: result.user });
   } catch {
-    sendJson(response, 400, { message: "Invalid request body." });
+    sendJson(res, 400, { message: "Invalid request body." });
   }
 }
 

@@ -1,3 +1,4 @@
+const ExcelJS = require("exceljs");
 const { getAllDetections } = require("./detectionService");
 const { getAllUsers } = require("./userService");
 const { getAllReports } = require("./reportService");
@@ -60,43 +61,45 @@ async function getDataRows(dataset) {
   }
 }
 
-function escapeXml(val) {
-  return String(val ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
+async function toExcel(columns, keys, rows) {
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = "Traffic Sign AI";
+  workbook.created = new Date();
 
-function toExcel(columns, keys, rows) {
-  const headerCells = columns
-    .map((c) => `<Cell><Data ss:Type="String">${escapeXml(c)}</Data></Cell>`)
-    .join("");
+  const sheet = workbook.addWorksheet("Export");
 
-  const dataRows = rows
-    .map((row) => {
-      const cells = keys.map((k) => {
-        const val = row[k] ?? "";
-        const type = typeof val === "number" ? "Number" : "String";
-        return `<Cell><Data ss:Type="${type}">${escapeXml(val)}</Data></Cell>`;
-      });
-      return `<Row>${cells.join("")}</Row>`;
-    })
-    .join("\n      ");
+  sheet.columns = columns.map((col, i) => ({
+    header: col,
+    key: keys[i],
+    width: Math.max(col.length + 4, 16),
+  }));
 
-  return [
-    '<?xml version="1.0" encoding="UTF-8"?>',
-    '<?mso-application progid="Excel.Sheet"?>',
-    '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"',
-    '  xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">',
-    '  <Worksheet ss:Name="Export">',
-    "    <Table>",
-    `      <Row>${headerCells}</Row>`,
-    `      ${dataRows}`,
-    "    </Table>",
-    "  </Worksheet>",
-    "</Workbook>",
-  ].join("\n");
+  const headerRow = sheet.getRow(1);
+  headerRow.eachCell((cell) => {
+    cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF2563EB" } };
+    cell.alignment = { vertical: "middle", horizontal: "center" };
+    cell.border = {
+      bottom: { style: "thin", color: { argb: "FF1D4ED8" } },
+    };
+  });
+  headerRow.height = 22;
+
+  rows.forEach((row) => {
+    const values = {};
+    keys.forEach((k) => { values[k] = row[k] ?? ""; });
+    sheet.addRow(values);
+  });
+
+  sheet.eachRow((row, rowNumber) => {
+    if (rowNumber === 1) return;
+    row.eachCell((cell) => {
+      cell.alignment = { vertical: "middle" };
+    });
+    row.height = 18;
+  });
+
+  return workbook.xlsx.writeBuffer();
 }
 
 function toCsvContent(columns, keys, rows) {
@@ -123,9 +126,9 @@ async function buildExport(dataset, format) {
 
   if (format === "excel") {
     return {
-      content: toExcel(meta.columns, meta.keys, rows),
-      contentType: "application/vnd.ms-excel",
-      fileName: `${dataset}-export.xls`,
+      content: await toExcel(meta.columns, meta.keys, rows),
+      contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      fileName: `${dataset}-export.xlsx`,
     };
   }
 

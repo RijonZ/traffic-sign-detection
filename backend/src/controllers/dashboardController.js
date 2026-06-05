@@ -5,22 +5,22 @@ const {
 } = require("../services/detectionService");
 const { getUserReportPdf, getUserReports } = require("../services/reportService");
 const { findUserByEmail } = require("../services/userService");
-const { readBody, sendJson, sendPdf } = require("../utils/http");
+const { sendJson, sendPdf } = require("../utils/http");
 
-function sendUserNotFound(response) {
-  sendJson(response, 404, { message: "User not found." });
+function sendUserNotFound(res) {
+  sendJson(res, 404, { message: "User not found." });
 }
 
-async function getDashboard(_, response, params) {
-  const [email] = params;
+async function getDashboard(req, res) {
+  const email = decodeURIComponent(req.params.email);
   const user = await findUserByEmail(email);
 
   if (!user) {
-    sendUserNotFound(response);
+    sendUserNotFound(res);
     return;
   }
 
-  sendJson(response, 200, {
+  sendJson(res, 200, {
     user: {
       name: user.name,
       email: user.email,
@@ -31,61 +31,61 @@ async function getDashboard(_, response, params) {
   });
 }
 
-async function getDetections(_, response, params) {
-  const [email] = params;
+async function getDetections(req, res) {
+  const email = decodeURIComponent(req.params.email);
 
   if (!(await findUserByEmail(email))) {
-    sendUserNotFound(response);
+    sendUserNotFound(res);
     return;
   }
 
-  sendJson(response, 200, { detections: await getUserDetections(email) });
+  sendJson(res, 200, { detections: await getUserDetections(email) });
 }
 
-async function createDetection(request, response, params) {
-  const [email] = params;
+async function createDetection(req, res) {
+  const email = decodeURIComponent(req.params.email);
 
   if (!(await findUserByEmail(email))) {
-    sendUserNotFound(response);
+    sendUserNotFound(res);
     return;
   }
 
   try {
-    const body = await readBody(request);
-    const detection = await addDetection(email, body);
-    sendJson(response, 201, { detection });
-  } catch (error) {
-    sendJson(response, 400, { message: "Invalid request body." });
+    const detection = await addDetection(email, req.body);
+    sendJson(res, 201, { detection });
+  } catch {
+    sendJson(res, 400, { message: "Invalid request body." });
   }
 }
 
-async function getReports(_, response, params) {
-  const [email] = params;
+async function getReports(req, res) {
+  const email = decodeURIComponent(req.params.email);
 
   if (!(await findUserByEmail(email))) {
-    sendUserNotFound(response);
+    sendUserNotFound(res);
     return;
   }
 
-  sendJson(response, 200, { reports: await getUserReports(email) });
+  sendJson(res, 200, { reports: await getUserReports(email) });
 }
 
-async function downloadReport(_, response, params) {
-  const [email, reportId] = params;
+async function downloadReport(req, res) {
+  const email = decodeURIComponent(req.params.email);
+  const reportId = req.params.id;
 
   if (!(await findUserByEmail(email))) {
-    sendUserNotFound(response);
+    sendUserNotFound(res);
     return;
   }
 
   const reportPdf = await getUserReportPdf(email, reportId);
 
   if (!reportPdf) {
-    sendJson(response, 404, { message: "Report not found." });
+    sendJson(res, 404, { message: "Report not found." });
     return;
   }
 
-  sendPdf(response, reportPdf.fileName, reportPdf.pdf);
+  sendPdf(res, reportPdf.fileName, reportPdf.pdf);
 }
 
 module.exports = { createDetection, downloadReport, getDashboard, getDetections, getReports };

@@ -1,17 +1,17 @@
 const { createChatReply } = require("../services/chatService");
-const { readBody, sendJson } = require("../utils/http");
+const { sendJson } = require("../utils/http");
 
-async function sendMessage(request, response) {
+async function sendMessage(req, res) {
   try {
-    const { message, user } = await readBody(request);
+    const { message, user } = req.body;
     const result = await createChatReply(message, user);
 
-    sendJson(response, 200, {
+    sendJson(res, 200, {
       reply: result.reply,
       source: result.source,
     });
-  } catch (error) {
-    sendJson(response, 400, { message: "Invalid chat request." });
+  } catch {
+    sendJson(res, 400, { message: "Invalid chat request." });
   }
 }
 
