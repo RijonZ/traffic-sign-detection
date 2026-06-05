@@ -1,9 +1,9 @@
-const https = require("https");
+const nodemailer = require("nodemailer");
 const fs = require("fs");
 const path = require("path");
 
 function loadEnv() {
-  if (process.env.RESEND_API_KEY) return;
+  if (process.env.GMAIL_USER) return;
   const envPath = path.resolve(__dirname, "../../../.env");
   if (!fs.existsSync(envPath)) return;
   fs.readFileSync(envPath, "utf8")
@@ -18,49 +18,26 @@ function loadEnv() {
 
 loadEnv();
 
-function post(body) {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) throw new Error("RESEND_API_KEY is not set in .env");
+function createTransporter() {
+  const user = process.env.GMAIL_USER;
+  const pass = process.env.GMAIL_APP_PASSWORD;
+  if (!user || !pass) throw new Error("GMAIL_USER or GMAIL_APP_PASSWORD is not set in .env");
 
-  const payload = JSON.stringify(body);
-
-  return new Promise((resolve, reject) => {
-    const req = https.request(
-      {
-        hostname: "api.resend.com",
-        path: "/emails",
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-          "Content-Length": Buffer.byteLength(payload),
-        },
-      },
-      (res) => {
-        let data = "";
-        res.on("data", (chunk) => { data += chunk; });
-        res.on("end", () => {
-          if (res.statusCode >= 200 && res.statusCode < 300) {
-            resolve(JSON.parse(data));
-          } else {
-            reject(new Error(`Resend ${res.statusCode}: ${data}`));
-          }
-        });
-      }
-    );
-    req.on("error", reject);
-    req.write(payload);
-    req.end();
+  return nodemailer.createTransport({
+    service: "gmail",
+    auth: { user, pass },
   });
 }
 
 async function sendResetEmail(toEmail, resetToken) {
   const appUrl = process.env.APP_BASE_URL || "http://localhost:5173";
-  const fromAddress = process.env.RESEND_FROM || "onboarding@resend.dev";
+  const fromUser = process.env.GMAIL_USER;
   const resetUrl = `${appUrl}/#/reset-password?token=${resetToken}`;
 
-  await post({
-    from: fromAddress,
+  const transporter = createTransporter();
+
+  await transporter.sendMail({
+    from: `"Traffic Sign AI" <${fromUser}>`,
     to: toEmail,
     subject: "Reset your password — Traffic Sign AI",
     html: `
