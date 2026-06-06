@@ -5,6 +5,7 @@ import { statusPillClass } from "../utils/statusUtils";
 import "../styles/audit-logs.css";
 import "../styles/auth.css";
 import "../styles/dashboard.css";
+import "../styles/reports.css";
 
 const USERS_KEY = "traffic-sign-users";
 const HISTORY_KEY = "traffic-sign-detections";
@@ -85,6 +86,11 @@ function buildAuditLogs() {
 function AuditLogs({ currentUser, onLogout, onNavigate }) {
   const fallbackLogs = useMemo(buildAuditLogs, []);
   const [logs, setLogs] = useState(fallbackLogs);
+  const [filters, setFilters] = useState({
+    module: "All",
+    status: "All",
+    user: "",
+  });
 
   useEffect(() => {
     if (!currentUser || currentUser.role !== "Administrator") {
@@ -101,10 +107,37 @@ function AuditLogs({ currentUser, onLogout, onNavigate }) {
       .catch(() => setLogs(fallbackLogs));
   }, [currentUser, fallbackLogs]);
 
-  const { page, setPage, totalPages, paginatedItems: paginatedLogs, pageSize } = usePagination(logs);
-  const successLogs = logs.filter((log) => log.status === "Success" || log.status === "Completed").length;
-  const reviewLogs = logs.filter((log) => log.status === "Review" || log.status === "Rejected").length;
   const modules = [...new Set(logs.map((log) => log.module))];
+  const statuses = [...new Set(logs.map((log) => log.status))];
+  const filteredLogs = useMemo(() => {
+    const search = filters.user.trim().toLowerCase();
+
+    return logs.filter((log) => {
+      const matchesSearch = !search ||
+        String(log.user || "").toLowerCase().includes(search) ||
+        String(log.action || "").toLowerCase().includes(search) ||
+        String(log.module || "").toLowerCase().includes(search);
+      const matchesModule = filters.module === "All" || log.module === filters.module;
+      const matchesStatus = filters.status === "All" || log.status === filters.status;
+
+      return matchesSearch && matchesModule && matchesStatus;
+    });
+  }, [filters, logs]);
+  const { page, setPage, totalPages, paginatedItems: paginatedLogs, pageSize } = usePagination(filteredLogs);
+  const successLogs = filteredLogs.filter((log) => log.status === "Success" || log.status === "Completed").length;
+  const reviewLogs = filteredLogs.filter((log) => log.status === "Review" || log.status === "Rejected").length;
+
+  useEffect(() => {
+    setPage(1);
+  }, [filters, setPage]);
+
+  function updateFilter(key, value) {
+    setFilters((currentFilters) => ({ ...currentFilters, [key]: value }));
+  }
+
+  function resetFilters() {
+    setFilters({ module: "All", status: "All", user: "" });
+  }
 
   if (!currentUser) {
     return (
@@ -162,7 +195,7 @@ function AuditLogs({ currentUser, onLogout, onNavigate }) {
         <section className="dashboard-grid">
           <div className="dashboard-card">
             <h3>Total Logs</h3>
-            <p className="metric-value">{logs.length}</p>
+            <p className="metric-value">{filteredLogs.length}</p>
           </div>
           <div className="dashboard-card">
             <h3>Success Events</h3>
@@ -172,6 +205,29 @@ function AuditLogs({ currentUser, onLogout, onNavigate }) {
             <h3>Review Events</h3>
             <p className="metric-value">{reviewLogs}</p>
           </div>
+        </section>
+
+        <section className="reports-filter-panel audit-filter-panel">
+          <input
+            placeholder="Filter by user, action, or module"
+            value={filters.user}
+            onChange={(event) => updateFilter("user", event.target.value)}
+          />
+          <select value={filters.module} onChange={(event) => updateFilter("module", event.target.value)}>
+            <option value="All">All modules</option>
+            {modules.map((module) => (
+              <option value={module} key={module}>{module}</option>
+            ))}
+          </select>
+          <select value={filters.status} onChange={(event) => updateFilter("status", event.target.value)}>
+            <option value="All">All statuses</option>
+            {statuses.map((status) => (
+              <option value={status} key={status}>{status}</option>
+            ))}
+          </select>
+          <button className="secondary-btn" type="button" onClick={resetFilters}>
+            Reset
+          </button>
         </section>
 
         <section className="audit-layout">
@@ -195,7 +251,17 @@ function AuditLogs({ currentUser, onLogout, onNavigate }) {
                 <p>{log.time}</p>
               </div>
             ))}
-            <Pagination page={page} totalPages={totalPages} total={logs.length} pageSize={pageSize} onPage={setPage} />
+            {!filteredLogs.length && (
+              <div className="audit-row">
+                <p>No logs</p>
+                <p>-</p>
+                <p>-</p>
+                <p>-</p>
+                <p><span className="status-pill">Empty</span></p>
+                <p>-</p>
+              </div>
+            )}
+            <Pagination page={page} totalPages={totalPages} total={filteredLogs.length} pageSize={pageSize} onPage={setPage} />
           </div>
 
           <aside className="audit-panel">

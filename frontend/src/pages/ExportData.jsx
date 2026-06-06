@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Navbar from "../shared/Navbar";
 import "../styles/export.css";
+import "../styles/reports.css";
 
 const API_BASE_URL = "http://localhost:5000/api";
 
@@ -97,6 +98,7 @@ export default function ExportData({ currentUser, onLogout, onNavigate }) {
   const [dataset, setDataset] = useState("detections");
   const [format, setFormat] = useState("csv");
   const [rows, setRows] = useState([]);
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
 
   // import state
@@ -218,7 +220,21 @@ export default function ExportData({ currentUser, onLogout, onNavigate }) {
   }
 
   const currentDatasetMeta = DATASETS.find((d) => d.key === dataset);
-  const columns = rows.length > 0 ? Object.keys(rows[0]) : [];
+  const filteredRows = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return rows;
+
+    return rows.filter((row) =>
+      Object.values(row).some((value) =>
+        String(value ?? "").toLowerCase().includes(query)
+      )
+    );
+  }, [rows, search]);
+  const columns = filteredRows.length > 0 ? Object.keys(filteredRows[0]) : (rows[0] ? Object.keys(rows[0]) : []);
+
+  function resetSearch() {
+    setSearch("");
+  }
 
   if (!currentUser || (!isAdmin && role !== "Manager")) {
     return (
@@ -274,17 +290,28 @@ export default function ExportData({ currentUser, onLogout, onNavigate }) {
               ))}
             </div>
 
+            <section className="reports-filter-panel export-filter-panel">
+              <input
+                placeholder="Filter records by user, email, status, or text"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+              <button className="secondary-btn" type="button" onClick={resetSearch}>
+                Reset
+              </button>
+            </section>
+
             <div className="export-layout">
               {/* Table */}
               <div>
                 <div className="export-table-wrapper">
                   <div className="export-table-title">
                     <span>{currentDatasetMeta?.label}</span>
-                    <span className="export-table-count">{loading ? "…" : `${rows.length} records`}</span>
+                    <span className="export-table-count">{loading ? "…" : `${filteredRows.length} records`}</span>
                   </div>
                   {loading ? (
                     <p className="export-empty">Loading…</p>
-                  ) : rows.length === 0 ? (
+                  ) : filteredRows.length === 0 ? (
                     <p className="export-empty">No records found.</p>
                   ) : (
                     <div className="export-table-scroll">
@@ -293,7 +320,7 @@ export default function ExportData({ currentUser, onLogout, onNavigate }) {
                           <tr>{columns.map((c) => <th key={c}>{c}</th>)}</tr>
                         </thead>
                         <tbody>
-                          {rows.slice(0, 10).map((row, i) => (
+                          {filteredRows.slice(0, 10).map((row, i) => (
                             <tr key={i}>
                               {columns.map((c) => (
                                 <td key={c} title={String(row[c] ?? "")}>
@@ -304,9 +331,9 @@ export default function ExportData({ currentUser, onLogout, onNavigate }) {
                           ))}
                         </tbody>
                       </table>
-                      {rows.length > 10 && (
+                      {filteredRows.length > 10 && (
                         <p style={{ color: "#94a3b8", fontSize: 12, padding: "10px 16px", margin: 0 }}>
-                          Showing 10 of {rows.length} — full data exported to file.
+                          Showing 10 of {filteredRows.length} filtered records.
                         </p>
                       )}
                     </div>
@@ -340,7 +367,7 @@ export default function ExportData({ currentUser, onLogout, onNavigate }) {
                   </div>
                   <div className="export-stat-row">
                     <span>Records</span>
-                    <strong>{rows.length}</strong>
+                    <strong>{filteredRows.length}</strong>
                   </div>
                   <div className="export-stat-row">
                     <span>Format</span>

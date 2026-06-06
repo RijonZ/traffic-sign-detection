@@ -89,6 +89,14 @@
   grid-template-columns: 1.4fr 1fr 1fr 1fr auto;
 }
 
+.audit-filter-panel {
+  grid-template-columns: 1.4fr 1fr 1fr auto;
+}
+
+.export-filter-panel {
+  grid-template-columns: 1fr auto;
+}
+
 .report-detail {
   background-color: white;
   border: 1px solid #e8edf5;
