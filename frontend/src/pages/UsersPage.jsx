@@ -30,6 +30,11 @@ const EMPTY_FORM = { name: "", email: "", password: "", role: "User" };
 function UsersPage({ currentUser, onLogout, onNavigate }) {
   const fallbackUsers = useMemo(readUsers, []);
   const [users, setUsers] = useState(fallbackUsers);
+  const [filters, setFilters] = useState({
+    role: "All",
+    status: "All",
+    user: "",
+  });
   const [saving, setSaving] = useState(null);
   const [actionError, setActionError] = useState(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -154,11 +159,38 @@ function UsersPage({ currentUser, onLogout, onNavigate }) {
     }
   }
 
-  const { page, setPage, totalPages, paginatedItems: paginatedUsers, pageSize } = usePagination(users);
-  const admins = users.filter((user) => user.role === "Administrator").length;
-  const managers = users.filter((user) => user.role === "Manager").length;
-  const regularUsers = users.filter((user) => user.role === "User").length;
-  const paidPlans = users.filter((u) => u.role === "User" && u.subscriptionPlan && u.subscriptionPlan.toLowerCase() !== "basic").length;
+  function updateFilter(key, value) {
+    setFilters((currentFilters) => ({ ...currentFilters, [key]: value }));
+  }
+
+  function resetFilters() {
+    setFilters({ role: "All", status: "All", user: "" });
+  }
+
+  const filteredUsers = useMemo(() => {
+    const search = filters.user.trim().toLowerCase();
+
+    return users.filter((user) => {
+      const matchesSearch = !search ||
+        String(user.name || "").toLowerCase().includes(search) ||
+        String(user.email || "").toLowerCase().includes(search);
+      const matchesRole = filters.role === "All" || user.role === filters.role;
+      const status = user.status || "Active";
+      const matchesStatus = filters.status === "All" || status === filters.status;
+
+      return matchesSearch && matchesRole && matchesStatus;
+    });
+  }, [filters, users]);
+
+  const { page, setPage, totalPages, paginatedItems: paginatedUsers, pageSize } = usePagination(filteredUsers);
+  const admins = filteredUsers.filter((user) => user.role === "Administrator").length;
+  const managers = filteredUsers.filter((user) => user.role === "Manager").length;
+  const regularUsers = filteredUsers.filter((user) => user.role === "User").length;
+  const paidPlans = filteredUsers.filter((u) => u.role === "User" && u.subscriptionPlan && u.subscriptionPlan.toLowerCase() !== "basic").length;
+
+  useEffect(() => {
+    setPage(1);
+  }, [filters, setPage]);
 
   if (!currentUser) {
     return (
@@ -319,6 +351,28 @@ function UsersPage({ currentUser, onLogout, onNavigate }) {
           <p className="auth-error" style={{ marginTop: "16px" }}>{actionError}</p>
         )}
 
+        <section className="reports-filter-panel users-filter-panel">
+          <input
+            placeholder="Filter by user or email"
+            value={filters.user}
+            onChange={(event) => updateFilter("user", event.target.value)}
+          />
+          <select value={filters.role} onChange={(event) => updateFilter("role", event.target.value)}>
+            <option value="All">All roles</option>
+            <option value="Administrator">Administrator</option>
+            <option value="Manager">Manager</option>
+            <option value="User">User</option>
+          </select>
+          <select value={filters.status} onChange={(event) => updateFilter("status", event.target.value)}>
+            <option value="All">All statuses</option>
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+          <button className="secondary-btn" type="button" onClick={resetFilters}>
+            Reset
+          </button>
+        </section>
+
         <section className="users-table">
           <div className="users-row users-head">
             <p>ID</p>
@@ -398,7 +452,18 @@ function UsersPage({ currentUser, onLogout, onNavigate }) {
               </div>
             );
           })}
-          <Pagination page={page} totalPages={totalPages} total={users.length} pageSize={pageSize} onPage={setPage} />
+          {!filteredUsers.length && (
+            <div className="users-row">
+              <p>-</p>
+              <p>No users found</p>
+              <p>-</p>
+              <p>-</p>
+              <p className="subscription-cell">-</p>
+              <p><span className="status-pill">Empty</span></p>
+              <p>-</p>
+            </div>
+          )}
+          <Pagination page={page} totalPages={totalPages} total={filteredUsers.length} pageSize={pageSize} onPage={setPage} />
         </section>
       </main>
     </div>

@@ -65,6 +65,30 @@
   width: 100%;
 }
 
+.reports-date-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.reports-date-filter span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.reports-date-filter input {
+  min-height: 42px;
+}
+
+.users-filter-panel {
+  grid-template-columns: 1.4fr 1fr 1fr auto;
+}
+
+.detections-filter-panel {
+  grid-template-columns: 1.4fr 1fr 1fr 1fr auto;
+}
+
 .report-detail {
   background-color: white;
   border: 1px solid #e8edf5;

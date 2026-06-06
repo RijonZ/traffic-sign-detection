@@ -5,6 +5,7 @@ import { statusPillClass } from "../utils/statusUtils";
 import "../styles/all-detections.css";
 import "../styles/auth.css";
 import "../styles/dashboard.css";
+import "../styles/reports.css";
 
 const HISTORY_KEY = "traffic-sign-detections";
 const API_BASE_URL = "http://localhost:5000/api";
@@ -82,7 +83,12 @@ function readDetections() {
 function AllDetections({ currentUser, onLogout, onNavigate }) {
   const fallbackDetections = useMemo(readDetections, []);
   const [detections, setDetections] = useState(fallbackDetections);
-  const { page, setPage, totalPages, paginatedItems, pageSize } = usePagination(detections);
+  const [filters, setFilters] = useState({
+    dateFrom: "",
+    dateTo: "",
+    status: "All",
+    user: "",
+  });
 
   useEffect(() => {
     if (!currentUser || currentUser.role !== "Administrator") {
@@ -99,9 +105,40 @@ function AllDetections({ currentUser, onLogout, onNavigate }) {
       .catch(() => setDetections(fallbackDetections));
   }, [currentUser, fallbackDetections]);
 
-  const completed = detections.filter((item) => item.status === "Completed").length;
-  const processing = detections.filter((item) => item.status === "Processing").length;
-  const rejected = detections.filter((item) => item.status === "Rejected").length;
+  function updateFilter(key, value) {
+    setFilters((currentFilters) => ({ ...currentFilters, [key]: value }));
+  }
+
+  function resetFilters() {
+    setFilters({ dateFrom: "", dateTo: "", status: "All", user: "" });
+  }
+
+  const filteredDetections = useMemo(() => {
+    const search = filters.user.trim().toLowerCase();
+    const from = filters.dateFrom ? new Date(`${filters.dateFrom}T00:00:00`) : null;
+    const to = filters.dateTo ? new Date(`${filters.dateTo}T23:59:59`) : null;
+
+    return detections.filter((item) => {
+      const detectedAt = item.detectedAt ? new Date(item.detectedAt) : null;
+      const matchesSearch = !search ||
+        String(item.requestedBy || "").toLowerCase().includes(search) ||
+        String(item.userEmail || "").toLowerCase().includes(search);
+      const matchesStatus = filters.status === "All" || item.status === filters.status;
+      const matchesFrom = !from || (detectedAt && detectedAt >= from);
+      const matchesTo = !to || (detectedAt && detectedAt <= to);
+
+      return matchesSearch && matchesStatus && matchesFrom && matchesTo;
+    });
+  }, [detections, filters]);
+
+  const { page, setPage, totalPages, paginatedItems, pageSize } = usePagination(filteredDetections);
+  const completed = filteredDetections.filter((item) => item.status === "Completed").length;
+  const processing = filteredDetections.filter((item) => item.status === "Processing").length;
+  const rejected = filteredDetections.filter((item) => item.status === "Rejected").length;
+
+  useEffect(() => {
+    setPage(1);
+  }, [filters, setPage]);
 
   if (!currentUser) {
     return (
@@ -159,7 +196,7 @@ function AllDetections({ currentUser, onLogout, onNavigate }) {
         <section className="dashboard-grid">
           <div className="dashboard-card">
             <h3>Total Requests</h3>
-            <p className="metric-value">{detections.length}</p>
+            <p className="metric-value">{filteredDetections.length}</p>
           </div>
           <div className="dashboard-card">
             <h3>Completed</h3>
@@ -169,6 +206,41 @@ function AllDetections({ currentUser, onLogout, onNavigate }) {
             <h3>Rejected</h3>
             <p className="metric-value">{rejected}</p>
           </div>
+        </section>
+
+        <section className="reports-filter-panel detections-filter-panel">
+          <input
+            placeholder="Filter by user or email"
+            value={filters.user}
+            onChange={(event) => updateFilter("user", event.target.value)}
+          />
+          <select value={filters.status} onChange={(event) => updateFilter("status", event.target.value)}>
+            <option value="All">All statuses</option>
+            <option value="Completed">Completed</option>
+            <option value="Rejected">Rejected</option>
+            <option value="Processing">Processing</option>
+          </select>
+          <label className="reports-date-filter">
+            <span>From date</span>
+            <input
+              aria-label="From date"
+              type="date"
+              value={filters.dateFrom}
+              onChange={(event) => updateFilter("dateFrom", event.target.value)}
+            />
+          </label>
+          <label className="reports-date-filter">
+            <span>To date</span>
+            <input
+              aria-label="To date"
+              type="date"
+              value={filters.dateTo}
+              onChange={(event) => updateFilter("dateTo", event.target.value)}
+            />
+          </label>
+          <button className="secondary-btn" type="button" onClick={resetFilters}>
+            Reset
+          </button>
         </section>
 
         <section className="detections-layout">
@@ -225,7 +297,17 @@ function AllDetections({ currentUser, onLogout, onNavigate }) {
               </p>
             </div>
           ))}
-          <Pagination page={page} totalPages={totalPages} total={detections.length} pageSize={pageSize} onPage={setPage} />
+          {!filteredDetections.length && (
+            <div className="detections-row">
+              <p>No requests</p>
+              <p>-</p>
+              <p>-</p>
+              <p>-</p>
+              <p>-</p>
+              <p><span className="status-pill">Empty</span></p>
+            </div>
+          )}
+          <Pagination page={page} totalPages={totalPages} total={filteredDetections.length} pageSize={pageSize} onPage={setPage} />
         </section>
       </main>
     </div>

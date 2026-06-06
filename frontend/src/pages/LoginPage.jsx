@@ -1,8 +1,7 @@
 import { useState } from "react";
 import Navbar from "../shared/Navbar";
+import { API_BASE_URL } from "../config/api";
 import "../styles/auth.css";
-
-const API_BASE_URL = "http://localhost:5000/api";
 
 function LoginPage({ currentUser, onLogin, onLogout, onNavigate, onSignUp, initialMode, resetToken }) {
   const [mode, setMode] = useState(initialMode || "login");

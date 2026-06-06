@@ -1,10 +1,10 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { connectSocket, disconnectSocket } from "../socket/socket";
+import { API_BASE_URL } from "../config/api";
 
 const AppContext = createContext(null);
 
 const SESSION_KEY = "traffic-sign-session";
-const API_BASE_URL = "http://localhost:5000/api";
 
 function getPageFromHash() {
   return window.location.hash.replace("#/", "").split("?")[0] || "home";

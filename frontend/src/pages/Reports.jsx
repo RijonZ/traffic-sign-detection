@@ -236,16 +236,24 @@ function Reports({ currentUser, onLogout, onNavigate }) {
             <option value="Rejected">Rejected</option>
             <option value="Processing">Processing</option>
           </select>
-          <input
-            type="date"
-            value={filters.dateFrom}
-            onChange={(event) => updateFilter("dateFrom", event.target.value)}
-          />
-          <input
-            type="date"
-            value={filters.dateTo}
-            onChange={(event) => updateFilter("dateTo", event.target.value)}
-          />
+          <label className="reports-date-filter">
+            <span>From date</span>
+            <input
+              aria-label="From date"
+              type="date"
+              value={filters.dateFrom}
+              onChange={(event) => updateFilter("dateFrom", event.target.value)}
+            />
+          </label>
+          <label className="reports-date-filter">
+            <span>To date</span>
+            <input
+              aria-label="To date"
+              type="date"
+              value={filters.dateTo}
+              onChange={(event) => updateFilter("dateTo", event.target.value)}
+            />
+          </label>
           <button className="secondary-btn" type="button" onClick={resetFilters}>
             Reset
           </button>

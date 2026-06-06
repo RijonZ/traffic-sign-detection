@@ -1,6 +1,7 @@
 import { io } from "socket.io-client";
+import { BACKEND_URL } from "../config/api";
 
-const SOCKET_URL = "http://localhost:5000";
+const SOCKET_URL = BACKEND_URL;
 
 let socket = null;
 
