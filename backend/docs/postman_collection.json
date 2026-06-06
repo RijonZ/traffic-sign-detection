@@ -1,0 +1,562 @@
+{
+  "info": {
+    "name": "Traffic Sign AI — API Collection",
+    "description": "Complete API documentation for the Traffic Sign AI platform.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/health",
+            "description": "Check if the backend server is running."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "url": "http://localhost:5000/api/auth/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@trafficsign.ai\",\n  \"password\": \"user123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Sign Up",
+          "request": {
+            "method": "POST",
+            "url": "http://localhost:5000/api/auth/signup",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"password123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": "http://localhost:5000/api/auth/logout",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"your-refresh-token\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "url": "http://localhost:5000/api/auth/refresh",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"your-refresh-token\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "url": "http://localhost:5000/api/auth/forgot-password",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "url": "http://localhost:5000/api/auth/reset-password",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"reset-token-from-email\",\n  \"password\": \"newpassword123\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "User — Profile & Dashboard",
+      "item": [
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/users/user@trafficsign.ai/profile"
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "url": "http://localhost:5000/api/users/user@trafficsign.ai/profile",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Dashboard",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/users/user@trafficsign.ai/dashboard"
+          }
+        },
+        {
+          "name": "Get Permissions",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/permissions?email=user@trafficsign.ai"
+          }
+        }
+      ]
+    },
+    {
+      "name": "User — Detections",
+      "item": [
+        {
+          "name": "Get Detection History",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/users/user@trafficsign.ai/detections"
+          }
+        },
+        {
+          "name": "Create Detection",
+          "request": {
+            "method": "POST",
+            "url": "http://localhost:5000/api/users/user@trafficsign.ai/detections",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fileName\": \"road-sign.jpg\",\n  \"fileType\": \"image/jpeg\",\n  \"fileSize\": 204800\n}"
+            }
+          }
+        },
+        {
+          "name": "Detect Sign (AI)",
+          "request": {
+            "method": "POST",
+            "url": "http://localhost:5000/api/detect-sign",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userEmail\": \"user@trafficsign.ai\",\n  \"fileName\": \"road-sign.jpg\",\n  \"fileType\": \"image/jpeg\",\n  \"fileSize\": 204800\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Detection History (Detect Page)",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/detect-sign?email=user@trafficsign.ai"
+          }
+        }
+      ]
+    },
+    {
+      "name": "User — Reports",
+      "item": [
+        {
+          "name": "Get Reports",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/users/user@trafficsign.ai/reports"
+          }
+        },
+        {
+          "name": "Download Report PDF",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/users/user@trafficsign.ai/reports/REP-123/pdf"
+          }
+        }
+      ]
+    },
+    {
+      "name": "User — Notifications",
+      "item": [
+        {
+          "name": "Get Notifications",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/users/user@trafficsign.ai/notifications"
+          }
+        },
+        {
+          "name": "Mark One as Read",
+          "request": {
+            "method": "POST",
+            "url": "http://localhost:5000/api/users/user@trafficsign.ai/notifications/read",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"notification-id\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Mark All as Read",
+          "request": {
+            "method": "POST",
+            "url": "http://localhost:5000/api/users/user@trafficsign.ai/notifications/read-all"
+          }
+        },
+        {
+          "name": "Delete One Notification",
+          "request": {
+            "method": "DELETE",
+            "url": "http://localhost:5000/api/users/user@trafficsign.ai/notifications/one?id=notification-id"
+          }
+        },
+        {
+          "name": "Delete Read Notifications",
+          "request": {
+            "method": "DELETE",
+            "url": "http://localhost:5000/api/users/user@trafficsign.ai/notifications/read"
+          }
+        },
+        {
+          "name": "Delete All Notifications",
+          "request": {
+            "method": "DELETE",
+            "url": "http://localhost:5000/api/users/user@trafficsign.ai/notifications/all"
+          }
+        }
+      ]
+    },
+    {
+      "name": "User — Feedback",
+      "item": [
+        {
+          "name": "Post Feedback",
+          "request": {
+            "method": "POST",
+            "url": "http://localhost:5000/api/detect-sign/detection-id/feedback",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userEmail\": \"user@trafficsign.ai\",\n  \"rating\": 5,\n  \"comment\": \"Very accurate detection!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Feedback for Detection",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/detect-sign/detection-id/feedback"
+          }
+        },
+        {
+          "name": "Get My Feedbacks",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/detect-sign/feedbacks?email=user@trafficsign.ai"
+          }
+        }
+      ]
+    },
+    {
+      "name": "User — Subscription",
+      "item": [
+        {
+          "name": "Get Subscription",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/users/user@trafficsign.ai/subscription"
+          }
+        },
+        {
+          "name": "Cancel Subscription",
+          "request": {
+            "method": "DELETE",
+            "url": "http://localhost:5000/api/users/user@trafficsign.ai/subscription"
+          }
+        },
+        {
+          "name": "Activate Basic Plan",
+          "request": {
+            "method": "POST",
+            "url": "http://localhost:5000/api/payments/basic-plan",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@trafficsign.ai\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Activate Demo Plan",
+          "request": {
+            "method": "POST",
+            "url": "http://localhost:5000/api/payments/demo-plan",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@trafficsign.ai\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Create Stripe Checkout Session",
+          "request": {
+            "method": "POST",
+            "url": "http://localhost:5000/api/payments/create-checkout-session",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@trafficsign.ai\",\n  \"plan\": \"Pro\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Confirm Stripe Checkout Session",
+          "request": {
+            "method": "POST",
+            "url": "http://localhost:5000/api/payments/confirm-checkout-session",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"stripe-session-id\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Subscription (Payment Page)",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/payments/subscription?email=user@trafficsign.ai"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Chat",
+      "item": [
+        {
+          "name": "Send Message to AI Chat",
+          "request": {
+            "method": "POST",
+            "url": "http://localhost:5000/api/chat",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"What is a stop sign?\",\n  \"userEmail\": \"user@trafficsign.ai\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Get Dashboard Summary",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/admin/dashboard?adminEmail=admin@trafficsign.ai"
+          }
+        },
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/admin/users?adminEmail=admin@trafficsign.ai"
+          }
+        },
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "url": "http://localhost:5000/api/admin/users",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"adminEmail\": \"admin@trafficsign.ai\",\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Smith\",\n  \"email\": \"jane@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"Manager\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "url": "http://localhost:5000/api/admin/users/user-id",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"adminEmail\": \"admin@trafficsign.ai\",\n  \"role\": \"Manager\",\n  \"isActive\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "url": "http://localhost:5000/api/admin/users/user-id?adminEmail=admin@trafficsign.ai"
+          }
+        },
+        {
+          "name": "Get All Detections",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/admin/detections?adminEmail=admin@trafficsign.ai"
+          }
+        },
+        {
+          "name": "Get All Reports",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/admin/reports?adminEmail=admin@trafficsign.ai"
+          }
+        },
+        {
+          "name": "Download Report PDF (Admin)",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/admin/reports/REP-123/pdf?adminEmail=admin@trafficsign.ai"
+          }
+        },
+        {
+          "name": "Export Reports (CSV)",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/admin/reports/export?adminEmail=admin@trafficsign.ai&format=csv"
+          }
+        },
+        {
+          "name": "Get Audit Logs",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/admin/audit-logs?adminEmail=admin@trafficsign.ai"
+          }
+        },
+        {
+          "name": "Get Model Monitoring",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/admin/model-monitoring?adminEmail=admin@trafficsign.ai"
+          }
+        },
+        {
+          "name": "Get Settings",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/admin/settings?adminEmail=admin@trafficsign.ai"
+          }
+        },
+        {
+          "name": "Update Settings",
+          "request": {
+            "method": "PUT",
+            "url": "http://localhost:5000/api/admin/settings",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"adminEmail\": \"admin@trafficsign.ai\",\n  \"settings\": {\n    \"max_detections_per_day\": \"10\",\n    \"maintenance_mode\": \"false\"\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "Get All Feedbacks",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/admin/feedbacks?adminEmail=admin@trafficsign.ai"
+          }
+        },
+        {
+          "name": "Export Dataset (Excel)",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/admin/export?adminEmail=admin@trafficsign.ai&dataset=detections&format=xlsx"
+          }
+        },
+        {
+          "name": "Export Dataset (CSV)",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/admin/export?adminEmail=admin@trafficsign.ai&dataset=detections&format=csv"
+          }
+        },
+        {
+          "name": "Export Dataset (JSON)",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/admin/export?adminEmail=admin@trafficsign.ai&dataset=detections&format=json"
+          }
+        },
+        {
+          "name": "Import Users",
+          "request": {
+            "method": "POST",
+            "url": "http://localhost:5000/api/admin/import?adminEmail=admin@trafficsign.ai",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dataset\": \"users\",\n  \"records\": [\n    { \"name\": \"Jane Doe\", \"email\": \"jane@example.com\", \"password\": \"pass123\", \"role\": \"User\" }\n  ]\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Manager",
+      "item": [
+        {
+          "name": "Get Dashboard Analytics",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/manager/dashboard-analytics?managerEmail=manager@trafficsign.ai"
+          }
+        },
+        {
+          "name": "Get Export Data",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/manager/export-data?managerEmail=manager@trafficsign.ai"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Docs",
+      "item": [
+        {
+          "name": "Swagger UI",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/docs"
+          }
+        },
+        {
+          "name": "OpenAPI Spec (JSON)",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/docs/spec"
+          }
+        }
+      ]
+    }
+  ]
+}
