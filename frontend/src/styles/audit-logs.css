@@ -1,20 +1,9 @@
-.audit-layout {
-  align-items: flex-start;
-  display: grid;
-  gap: 24px;
-  grid-template-columns: 1.5fr 0.7fr;
-  margin-top: 24px;
-}
-
-.audit-table,
-.audit-panel {
+.audit-table {
   background-color: white;
   border: 1px solid #e8edf5;
   border-radius: 8px;
   box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
-}
-
-.audit-table {
+  margin-top: 12px;
   overflow: hidden;
 }
 
@@ -33,7 +22,10 @@
 .audit-row p {
   color: #4b5563;
   margin: 0;
-  overflow-wrap: anywhere;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .audit-head {
@@ -43,27 +35,12 @@
 
 .audit-head p {
   color: #1f2937;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.audit-panel {
-  padding: 24px;
-}
-
-.audit-panel h2 {
-  margin: 0 0 16px;
-}
-
-.audit-panel p {
-  border-bottom: 1px solid #e5e7eb;
-  color: #4b5563;
-  margin: 0;
-  padding: 14px 0;
-}
-
-.audit-panel p:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
-}
 
 @media (max-width: 768px) {
   .audit-layout,

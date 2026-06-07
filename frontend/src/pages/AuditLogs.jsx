@@ -230,47 +230,37 @@ function AuditLogs({ currentUser, onLogout, onNavigate }) {
           </button>
         </section>
 
-        <section className="audit-layout">
-          <div className="audit-table">
-            <div className="audit-row audit-head">
-              <p>Log ID</p>
-              <p>Action</p>
-              <p>Module</p>
-              <p>User</p>
-              <p>Status</p>
-              <p>Time</p>
-            </div>
-
-            {paginatedLogs.map((log) => (
-              <div className="audit-row" key={log.id}>
-                <p>{log.id}</p>
-                <p>{log.action}</p>
-                <p>{log.module}</p>
-                <p>{log.user}</p>
-                <p><span className={statusPillClass(log.status)}>{log.status}</span></p>
-                <p>{log.time}</p>
-              </div>
-            ))}
-            {!filteredLogs.length && (
-              <div className="audit-row">
-                <p>No logs</p>
-                <p>-</p>
-                <p>-</p>
-                <p>-</p>
-                <p><span className="status-pill">Empty</span></p>
-                <p>-</p>
-              </div>
-            )}
-            <Pagination page={page} totalPages={totalPages} total={filteredLogs.length} pageSize={pageSize} onPage={setPage} />
+        <section className="audit-table">
+          <div className="audit-row audit-head">
+            <p>Log ID</p>
+            <p>Action</p>
+            <p>Module</p>
+            <p>User</p>
+            <p>Status</p>
+            <p>Time</p>
           </div>
 
-          <aside className="audit-panel">
-            <span className="eyebrow">Tracked modules</span>
-            <h2>System coverage</h2>
-            {modules.map((module) => (
-              <p key={module}>{module}</p>
-            ))}
-          </aside>
+          {paginatedLogs.map((log) => (
+            <div className="audit-row" key={log.id}>
+              <p title={log.id}>{log.id}</p>
+              <p title={log.action}>{log.action}</p>
+              <p title={log.module}>{log.module}</p>
+              <p title={log.user}>{log.user}</p>
+              <p><span className={statusPillClass(log.status)}>{log.status}</span></p>
+              <p title={log.time}>{log.time}</p>
+            </div>
+          ))}
+          {!filteredLogs.length && (
+            <div className="audit-row">
+              <p>No logs</p>
+              <p>-</p>
+              <p>-</p>
+              <p>-</p>
+              <p><span className="status-pill">Empty</span></p>
+              <p>-</p>
+            </div>
+          )}
+          <Pagination page={page} totalPages={totalPages} total={filteredLogs.length} pageSize={pageSize} onPage={setPage} />
         </section>
 
         <section className="activity-panel">

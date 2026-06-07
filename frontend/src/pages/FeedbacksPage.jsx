@@ -205,17 +205,17 @@ function FeedbacksPage({ currentUser, onLogout, onNavigate }) {
                 key={fb.id}
                 style={{ gridTemplateColumns: "1.6fr 1.4fr 1.2fr 1fr 2fr 1fr" }}
               >
-                <p style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <strong style={{ fontSize: "13px" }}>{fb.userName}</strong>
-                  <span style={{ fontSize: "12px", color: "#9ca3af" }}>{fb.userEmail}</span>
+                <p style={{ display: "flex", flexDirection: "column", gap: "2px", whiteSpace: "normal", overflow: "hidden" }}>
+                  <strong style={{ fontSize: "13px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={fb.userName}>{fb.userName}</strong>
+                  <span style={{ fontSize: "12px", color: "#9ca3af", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={fb.userEmail}>{fb.userEmail}</span>
                 </p>
-                <p>{fb.sign}</p>
+                <p title={fb.sign}>{fb.sign}</p>
                 <p><Stars rating={fb.rating} /></p>
                 <p style={{ fontWeight: 600, color: "#f59e0b" }}>{fb.rating} / 5</p>
-                <p style={{ color: fb.comment ? "#374151" : "#9ca3af", fontStyle: fb.comment ? "normal" : "italic" }}>
+                <p style={{ color: fb.comment ? "#374151" : "#9ca3af", fontStyle: fb.comment ? "normal" : "italic", whiteSpace: "normal" }} title={fb.comment}>
                   {fb.comment || "No comment"}
                 </p>
-                <p>{formatDate(fb.createdAt)}</p>
+                <p title={formatDate(fb.createdAt)}>{formatDate(fb.createdAt)}</p>
               </div>
             ))}
           <Pagination page={page} totalPages={totalPages} total={filteredFeedbacks.length} pageSize={pageSize} onPage={setPage} />

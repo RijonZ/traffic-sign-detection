@@ -45,10 +45,18 @@
 }
 
 .detections-flow-step p,
-.detections-summary p,
+.detections-summary p {
+  color: #4b5563;
+  margin: 0;
+}
+
 .detections-row p {
   color: #4b5563;
   margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .detections-summary p {
@@ -66,7 +74,7 @@
 }
 
 .detections-table {
-  margin-top: 24px;
+  margin-top: 12px;
   overflow: hidden;
 }
 
@@ -74,7 +82,7 @@
   align-items: center;
   display: grid;
   gap: 14px;
-  grid-template-columns: 0.8fr 1.4fr 1fr 1.4fr 0.8fr 1fr 1.2fr;
+  grid-template-columns: 0.8fr 1.4fr 1fr 1.4fr 0.8fr 1fr;
   padding: 16px 20px;
   border-top: 1px solid #e5e7eb;
 }
@@ -90,27 +98,12 @@
 
 .detections-head p {
   color: #1f2937;
-}
-
-.detection-edit-fields {
-  display: grid;
-  gap: 6px;
-}
-
-.detection-edit-fields input,
-.detection-confidence-input {
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  color: #374151;
-  font-size: 13px;
   min-width: 0;
-  padding: 6px 8px;
-  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.detection-confidence-input {
-  box-sizing: border-box;
-}
 
 .users-actions {
   align-items: center;

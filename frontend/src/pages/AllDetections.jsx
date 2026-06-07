@@ -83,15 +83,6 @@ function readDetections() {
 function AllDetections({ currentUser, onLogout, onNavigate }) {
   const fallbackDetections = useMemo(readDetections, []);
   const [detections, setDetections] = useState(fallbackDetections);
-  const [actionError, setActionError] = useState("");
-  const [editingId, setEditingId] = useState("");
-  const [editForm, setEditForm] = useState({
-    sign: "",
-    category: "",
-    confidence: 0,
-    status: "Completed",
-  });
-  const [savingId, setSavingId] = useState("");
   const [filters, setFilters] = useState({
     dateFrom: "",
     dateTo: "",
@@ -120,95 +111,6 @@ function AllDetections({ currentUser, onLogout, onNavigate }) {
 
   function resetFilters() {
     setFilters({ dateFrom: "", dateTo: "", status: "All", user: "" });
-  }
-
-  function startEditing(item) {
-    setActionError("");
-    setEditingId(item.id);
-    setEditForm({
-      sign: item.sign || "Not detected",
-      category: item.category || "Unknown",
-      confidence: Number(item.confidence || 0),
-      status: item.status || "Completed",
-    });
-  }
-
-  function updateEditForm(key, value) {
-    setEditForm((currentForm) => ({ ...currentForm, [key]: value }));
-  }
-
-  function cancelEditing() {
-    setEditingId("");
-    setActionError("");
-  }
-
-  async function saveDetection(item) {
-    setSavingId(item.id);
-    setActionError("");
-
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/admin/detections/${encodeURIComponent(item.id)}?adminEmail=${encodeURIComponent(currentUser.email)}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            fileName: item.fileName,
-            fileSize: item.fileSize || 0,
-            fileType: item.fileType || "image/unknown",
-            box: item.box || "",
-            ...editForm,
-          }),
-        }
-      );
-      const data = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        throw new Error(data?.message || "Detection could not be updated.");
-      }
-
-      setDetections((currentDetections) =>
-        currentDetections.map((detection) =>
-          detection.id === item.id ? data.detection : detection
-        )
-      );
-      setEditingId("");
-    } catch (error) {
-      setActionError(error.message);
-    } finally {
-      setSavingId("");
-    }
-  }
-
-  async function deleteDetection(item) {
-    const confirmed = window.confirm(`Delete detection ${item.id}?`);
-    if (!confirmed) return;
-
-    setSavingId(item.id);
-    setActionError("");
-
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/admin/detections/${encodeURIComponent(item.id)}?adminEmail=${encodeURIComponent(currentUser.email)}`,
-        { method: "DELETE" }
-      );
-      const data = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        throw new Error(data?.message || "Detection could not be deleted.");
-      }
-
-      setDetections((currentDetections) =>
-        currentDetections.filter((detection) => detection.id !== item.id)
-      );
-      if (editingId === item.id) {
-        setEditingId("");
-      }
-    } catch (error) {
-      setActionError(error.message);
-    } finally {
-      setSavingId("");
-    }
   }
 
   const filteredDetections = useMemo(() => {
@@ -306,46 +208,6 @@ function AllDetections({ currentUser, onLogout, onNavigate }) {
           </div>
         </section>
 
-        <section className="reports-filter-panel detections-filter-panel">
-          <input
-            placeholder="Filter by user or email"
-            value={filters.user}
-            onChange={(event) => updateFilter("user", event.target.value)}
-          />
-          <select value={filters.status} onChange={(event) => updateFilter("status", event.target.value)}>
-            <option value="All">All statuses</option>
-            <option value="Completed">Completed</option>
-            <option value="Rejected">Rejected</option>
-            <option value="Processing">Processing</option>
-            <option value="Failed">Failed</option>
-          </select>
-          <label className="reports-date-filter">
-            <span>From date</span>
-            <input
-              aria-label="From date"
-              type="date"
-              value={filters.dateFrom}
-              onChange={(event) => updateFilter("dateFrom", event.target.value)}
-            />
-          </label>
-          <label className="reports-date-filter">
-            <span>To date</span>
-            <input
-              aria-label="To date"
-              type="date"
-              value={filters.dateTo}
-              onChange={(event) => updateFilter("dateTo", event.target.value)}
-            />
-          </label>
-          <button className="secondary-btn" type="button" onClick={resetFilters}>
-            Reset
-          </button>
-        </section>
-
-        {actionError && (
-          <p className="auth-error" style={{ marginTop: "16px" }}>{actionError}</p>
-        )}
-
         <section className="detections-layout">
           <div className="detections-panel">
             <div className="panel-title">
@@ -378,6 +240,36 @@ function AllDetections({ currentUser, onLogout, onNavigate }) {
           </div>
         </section>
 
+        <section className="reports-filter-panel detections-filter-panel">
+          <input
+            placeholder="Filter by user or email"
+            value={filters.user}
+            onChange={(event) => updateFilter("user", event.target.value)}
+          />
+          <select value={filters.status} onChange={(event) => updateFilter("status", event.target.value)}>
+            <option value="All">All statuses</option>
+            <option value="Completed">Completed</option>
+            <option value="Rejected">Rejected</option>
+            <option value="Processing">Processing</option>
+            <option value="Failed">Failed</option>
+          </select>
+          <input
+            aria-label="From date"
+            type="date"
+            value={filters.dateFrom}
+            onChange={(event) => updateFilter("dateFrom", event.target.value)}
+          />
+          <input
+            aria-label="To date"
+            type="date"
+            value={filters.dateTo}
+            onChange={(event) => updateFilter("dateTo", event.target.value)}
+          />
+          <button className="secondary-btn" type="button" onClick={resetFilters}>
+            Reset
+          </button>
+        </section>
+
         <section className="detections-table">
           <div className="detections-row detections-head">
             <p>Request</p>
@@ -386,98 +278,18 @@ function AllDetections({ currentUser, onLogout, onNavigate }) {
             <p>Detected Sign</p>
             <p>Confidence</p>
             <p>Status</p>
-            <p>Actions</p>
           </div>
 
           {paginatedItems.map((item) => (
             <div className="detections-row" key={item.id}>
-              <p>{item.id}</p>
-              <p>{item.fileName}</p>
-              <p>{item.requestedBy}</p>
-              {editingId === item.id ? (
-                <>
-                  <div className="detection-edit-fields">
-                    <input
-                      aria-label="Detected sign"
-                      value={editForm.sign}
-                      onChange={(event) => updateEditForm("sign", event.target.value)}
-                    />
-                    <input
-                      aria-label="Detection category"
-                      value={editForm.category}
-                      onChange={(event) => updateEditForm("category", event.target.value)}
-                    />
-                  </div>
-                  <input
-                    className="detection-confidence-input"
-                    aria-label="Confidence"
-                    min="0"
-                    max="100"
-                    type="number"
-                    value={editForm.confidence}
-                    onChange={(event) => updateEditForm("confidence", event.target.value)}
-                  />
-                  <select
-                    className="role-select"
-                    value={editForm.status}
-                    onChange={(event) => updateEditForm("status", event.target.value)}
-                  >
-                    <option value="Completed">Completed</option>
-                    <option value="Processing">Processing</option>
-                    <option value="Rejected">Rejected</option>
-                    <option value="Failed">Failed</option>
-                  </select>
-                </>
-              ) : (
-                <>
-                  <p>{item.sign}</p>
-                  <p>{item.confidence}%</p>
-                  <p>
-                    <span className={statusPillClass(item.status)}>{item.status}</span>
-                  </p>
-                </>
-              )}
-              <div className="users-actions">
-                {editingId === item.id ? (
-                  <>
-                    <button
-                      className="action-btn action-btn-toggle"
-                      disabled={savingId === item.id}
-                      type="button"
-                      onClick={() => saveDetection(item)}
-                    >
-                      {savingId === item.id ? "Saving" : "Save"}
-                    </button>
-                    <button
-                      className="action-btn"
-                      disabled={savingId === item.id}
-                      type="button"
-                      onClick={cancelEditing}
-                    >
-                      Cancel
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      className="action-btn action-btn-toggle"
-                      disabled={Boolean(savingId)}
-                      type="button"
-                      onClick={() => startEditing(item)}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      className="action-btn action-btn-danger"
-                      disabled={Boolean(savingId)}
-                      type="button"
-                      onClick={() => deleteDetection(item)}
-                    >
-                      Delete
-                    </button>
-                  </>
-                )}
-              </div>
+              <p title={item.id}>{item.id}</p>
+              <p title={item.fileName}>{item.fileName}</p>
+              <p title={item.requestedBy}>{item.requestedBy}</p>
+              <p title={item.sign}>{item.sign}</p>
+              <p>{item.confidence}%</p>
+              <p>
+                <span className={statusPillClass(item.status)}>{item.status}</span>
+              </p>
             </div>
           ))}
           {!filteredDetections.length && (
@@ -488,7 +300,6 @@ function AllDetections({ currentUser, onLogout, onNavigate }) {
               <p>-</p>
               <p>-</p>
               <p><span className="status-pill">Empty</span></p>
-              <p>-</p>
             </div>
           )}
           <Pagination page={page} totalPages={totalPages} total={filteredDetections.length} pageSize={pageSize} onPage={setPage} />

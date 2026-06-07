@@ -21,7 +21,10 @@
 .report-row p {
   color: #4b5563;
   margin: 0;
-  overflow-wrap: anywhere;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .report-head {
@@ -31,6 +34,10 @@
 
 .report-head p {
   color: #1f2937;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .report-status-message {
@@ -50,7 +57,8 @@
   display: grid;
   gap: 12px;
   grid-template-columns: 1.4fr 1fr 1fr 1fr auto auto;
-  margin-bottom: 18px;
+  margin-top: 28px;
+  margin-bottom: 12px;
   padding: 16px;
 }
 
@@ -59,30 +67,22 @@
   border: 1px solid #d1d5db;
   border-radius: 6px;
   box-sizing: border-box;
+  color: #374151;
   font: inherit;
   min-height: 42px;
   padding: 10px 12px;
   width: 100%;
 }
 
-.reports-date-filter {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.reports-filter-panel input:focus,
+.reports-filter-panel select:focus {
+  border-color: #2563eb;
+  outline: none;
 }
 
-.reports-date-filter span {
-  color: #64748b;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.reports-date-filter input {
-  min-height: 42px;
-}
 
 .users-filter-panel {
-  grid-template-columns: 1.4fr 1fr 1fr auto;
+  grid-template-columns: 1.4fr 1fr 1fr 1fr auto;
 }
 
 .detections-filter-panel {
@@ -157,7 +157,10 @@
 .admin-report-row p {
   color: #4b5563;
   margin: 0;
-  overflow-wrap: anywhere;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .admin-report-head {
@@ -167,6 +170,10 @@
 
 .admin-report-head p {
   color: #1f2937;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .report-modal-overlay {

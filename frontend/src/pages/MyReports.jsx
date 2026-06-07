@@ -194,9 +194,9 @@ function MyReports({ currentUser, onLogout, onNavigate }) {
 
           {!isLoading && paginatedReports.map((report) => (
             <div className="report-row" key={report.id}>
-              <p>{report.id}</p>
-              <p>{report.fileName}</p>
-              <p>{report.sign}</p>
+              <p title={report.id}>{report.id}</p>
+              <p title={report.fileName}>{report.fileName}</p>
+              <p title={report.sign}>{report.sign}</p>
               <p>
                 <span className={statusPillClass(report.status)}>{report.status}</span>
               </p>

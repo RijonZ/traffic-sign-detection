@@ -2,7 +2,7 @@
   background-color: white;
   border: 1px solid #e8edf5;
   border-radius: 8px;
-  margin-top: 24px;
+  margin-top: 12px;
   overflow: hidden;
 }
 
@@ -22,7 +22,10 @@
 .users-row p {
   color: #4b5563;
   margin: 0;
-  overflow-wrap: anywhere;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .users-head {
@@ -32,6 +35,10 @@
 
 .users-head p {
   color: #1f2937;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .user-id {

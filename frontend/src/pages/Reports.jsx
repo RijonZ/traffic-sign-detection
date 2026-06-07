@@ -236,24 +236,18 @@ function Reports({ currentUser, onLogout, onNavigate }) {
             <option value="Rejected">Rejected</option>
             <option value="Processing">Processing</option>
           </select>
-          <label className="reports-date-filter">
-            <span>From date</span>
-            <input
-              aria-label="From date"
-              type="date"
-              value={filters.dateFrom}
-              onChange={(event) => updateFilter("dateFrom", event.target.value)}
-            />
-          </label>
-          <label className="reports-date-filter">
-            <span>To date</span>
-            <input
-              aria-label="To date"
-              type="date"
-              value={filters.dateTo}
-              onChange={(event) => updateFilter("dateTo", event.target.value)}
-            />
-          </label>
+          <input
+            aria-label="From date"
+            type="date"
+            value={filters.dateFrom}
+            onChange={(event) => updateFilter("dateFrom", event.target.value)}
+          />
+          <input
+            aria-label="To date"
+            type="date"
+            value={filters.dateTo}
+            onChange={(event) => updateFilter("dateTo", event.target.value)}
+          />
           <button className="secondary-btn" type="button" onClick={resetFilters}>
             Reset
           </button>
@@ -276,10 +270,10 @@ function Reports({ currentUser, onLogout, onNavigate }) {
 
           {paginatedReports.map((report) => (
             <div className="admin-report-row" key={report.id}>
-              <p>{report.id}</p>
-              <p>{report.fileName}</p>
-              <p>{report.requestedBy}</p>
-              <p>{report.sign}</p>
+              <p title={report.id}>{report.id}</p>
+              <p title={report.fileName}>{report.fileName}</p>
+              <p title={report.requestedBy}>{report.requestedBy}</p>
+              <p title={report.sign}>{report.sign}</p>
               <p><span className={statusPillClass(report.status)}>{report.status}</span></p>
               <button className="secondary-btn" onClick={() => setSelectedReport(report)}>
                 View

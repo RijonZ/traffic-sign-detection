@@ -33,6 +33,7 @@ function UsersPage({ currentUser, onLogout, onNavigate }) {
   const [filters, setFilters] = useState({
     role: "All",
     status: "All",
+    subscription: "All",
     user: "",
   });
   const [saving, setSaving] = useState(null);
@@ -164,7 +165,7 @@ function UsersPage({ currentUser, onLogout, onNavigate }) {
   }
 
   function resetFilters() {
-    setFilters({ role: "All", status: "All", user: "" });
+    setFilters({ role: "All", status: "All", subscription: "All", user: "" });
   }
 
   const filteredUsers = useMemo(() => {
@@ -177,8 +178,15 @@ function UsersPage({ currentUser, onLogout, onNavigate }) {
       const matchesRole = filters.role === "All" || user.role === filters.role;
       const status = user.status || "Active";
       const matchesStatus = filters.status === "All" || status === filters.status;
+      const plan = (user.subscriptionPlan || "None").trim().toLowerCase();
+      const isRegularUser = user.role === "User";
+      const hasPaidPlan = isRegularUser && plan !== "none" && plan !== "basic";
+      const matchesSubscription =
+        filters.subscription === "All" ||
+        (filters.subscription === "Paid" && hasPaidPlan) ||
+        (filters.subscription === "None" && isRegularUser && !hasPaidPlan);
 
-      return matchesSearch && matchesRole && matchesStatus;
+      return matchesSearch && matchesRole && matchesStatus && matchesSubscription;
     });
   }, [filters, users]);
 
@@ -186,7 +194,11 @@ function UsersPage({ currentUser, onLogout, onNavigate }) {
   const admins = filteredUsers.filter((user) => user.role === "Administrator").length;
   const managers = filteredUsers.filter((user) => user.role === "Manager").length;
   const regularUsers = filteredUsers.filter((user) => user.role === "User").length;
-  const paidPlans = filteredUsers.filter((u) => u.role === "User" && u.subscriptionPlan && u.subscriptionPlan.toLowerCase() !== "basic").length;
+  const paidPlans = filteredUsers.filter((u) => {
+    if (u.role !== "User") return false;
+    const plan = (u.subscriptionPlan || "").toLowerCase();
+    return plan && plan !== "none" && plan !== "basic";
+  }).length;
 
   useEffect(() => {
     setPage(1);
@@ -322,13 +334,7 @@ function UsersPage({ currentUser, onLogout, onNavigate }) {
           </div>
         )}
 
-        <section className="dashboard-grid">
-          <div className="dashboard-card">
-            <h3>Online Now</h3>
-            <p className="metric-value">
-              {users.filter((user) => user.sessionStatus === "Online").length}
-            </p>
-          </div>
+        <section className="dashboard-grid" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>
           <div className="dashboard-card">
             <h3>Administrators</h3>
             <p className="metric-value">{admins}</p>
@@ -368,6 +374,11 @@ function UsersPage({ currentUser, onLogout, onNavigate }) {
             <option value="Active">Active</option>
             <option value="Inactive">Inactive</option>
           </select>
+          <select value={filters.subscription} onChange={(event) => updateFilter("subscription", event.target.value)}>
+            <option value="All">All subscriptions</option>
+            <option value="Paid">Paid plans</option>
+            <option value="None">No subscription</option>
+          </select>
           <button className="secondary-btn" type="button" onClick={resetFilters}>
             Reset
           </button>
@@ -395,8 +406,8 @@ function UsersPage({ currentUser, onLogout, onNavigate }) {
                 <p className="user-id" title={user.id}>
                   {user.id ? `#${String(user.id).slice(-6)}` : "—"}
                 </p>
-                <p>{user.name}</p>
-                <p>{user.email}</p>
+                <p title={user.name}>{user.name}</p>
+                <p title={user.email}>{user.email}</p>
                 <p>
                   {user.id && !isSelf ? (
                     <select

@@ -219,9 +219,9 @@ function DetectionHistory({ currentUser, onLogout, onNavigate }) {
               return (
                 <div key={detection.id}>
                   <div className="history-row">
-                    <p>{detection.id}</p>
-                    <p>{detection.imageName}</p>
-                    <p>{detection.sign}</p>
+                    <p title={detection.id}>{detection.id}</p>
+                    <p title={detection.imageName}>{detection.imageName}</p>
+                    <p title={detection.sign}>{detection.sign}</p>
                     <p>{detection.confidence}</p>
                     <p>
                       <span className={statusPillClass(detection.status)}>

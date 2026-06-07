@@ -33,6 +33,31 @@ function HomePage({ currentUser, onLogout, onNavigate }) {
   }, [currentUser]);
 
   const userStats = homeData?.userStats;
+  const globalStats = homeData?.globalStats;
+
+  function getWorkspaceItems() {
+    if (!userStats) return [];
+    const role = userStats.role || currentUser?.role;
+    if (role === "Administrator") {
+      return [
+        `${globalStats?.totalUsers ?? 0} registered users`,
+        `${globalStats?.totalDetections ?? 0} total detections`,
+        `${globalStats?.averageConfidence ?? "0%"} average confidence`,
+      ];
+    }
+    if (role === "Manager") {
+      return [
+        `${globalStats?.totalDetections ?? 0} total detections`,
+        `${globalStats?.completedDetections ?? 0} completed`,
+        `${globalStats?.averageConfidence ?? "0%"} average confidence`,
+      ];
+    }
+    return [
+      `${userStats.totalDetections ?? 0} saved detections`,
+      `Latest: ${userStats.latestSign || "No detection yet"}`,
+      `${userStats.activePlan || "Basic"} plan`,
+    ];
+  }
   const featureCards = homeData?.features || [
     {
       title: "Fast Detection",
@@ -96,11 +121,7 @@ function HomePage({ currentUser, onLogout, onNavigate }) {
         <div className="hero-card">
           <span className="status-pill">{currentUser ? currentUser.role : "Detection workflow"}</span>
           <h3>{currentUser ? "Your workspace" : "How it works"}</h3>
-          {(currentUser ? [
-            `${userStats?.totalDetections ?? 0} saved detections`,
-            `Latest: ${userStats?.latestSign || "No detection yet"}`,
-            `${userStats?.activePlan || "Basic"} plan`,
-          ] : ["Upload a road image", "Review model prediction", "Track the result"]).map(
+          {(currentUser ? getWorkspaceItems() : ["Upload a road image", "Review model prediction", "Track the result"]).map(
             (item, index) => <p key={item}>{index + 1}. {item}</p>
           )}
           <button

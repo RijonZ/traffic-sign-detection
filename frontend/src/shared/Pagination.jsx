@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 const DEFAULT_PAGE_SIZE = 10;
 
@@ -8,7 +8,6 @@ export function usePagination(items, pageSize = DEFAULT_PAGE_SIZE) {
   const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
   const safePage = Math.min(page, totalPages);
 
-  // Reset to page 1 when data loads or changes size
   useEffect(() => {
     setPage(1);
   }, [items.length]);
@@ -18,9 +17,12 @@ export function usePagination(items, pageSize = DEFAULT_PAGE_SIZE) {
     return items.slice(start, start + pageSize);
   }, [items, safePage, pageSize]);
 
-  function goTo(n) {
-    setPage(Math.max(1, Math.min(n, totalPages)));
-  }
+  const goTo = useCallback((n) => {
+    setPage((prev) => {
+      const next = Math.max(1, Math.min(n, totalPages));
+      return next !== prev ? next : prev;
+    });
+  }, [totalPages]);
 
   return { page: safePage, setPage: goTo, totalPages, paginatedItems, pageSize };
 }
