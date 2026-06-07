@@ -7,6 +7,18 @@ const { findUserByEmail } = require("./userService");
 const BASIC_PLAN_LIMIT = 3;
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const VALID_STATUSES = new Set([
+  "created",
+  "uploaded",
+  "validating",
+  "processing",
+  "predicted",
+  "saved",
+  "notified",
+  "completed",
+  "rejected",
+  "failed",
+]);
 
 const samplePredictions = [
   { sign: "Stop Sign", category: "Regulatory", confidence: 96, box: "x: 124, y: 88, w: 210, h: 210" },
@@ -67,6 +79,25 @@ function normalizeStatus(status) {
   return String(status || "completed").toLowerCase();
 }
 
+function normalizeDetectionUpdate(data = {}, currentDetection = {}) {
+  const status = normalizeStatus(data.status || currentDetection.status);
+
+  if (!VALID_STATUSES.has(status)) {
+    return { error: "Invalid detection status." };
+  }
+
+  return {
+    status,
+    fileName: String(data.fileName || currentDetection.filename || "unknown-file").trim() || "unknown-file",
+    fileSize: Number(data.fileSize ?? currentDetection.file_size ?? 0),
+    fileType: String(data.fileType || currentDetection.file_type || "image/unknown").trim() || "image/unknown",
+    sign: String(data.sign || currentDetection.sign_name || "Not detected").trim() || "Not detected",
+    category: String(data.category || currentDetection.category || "Unknown").trim() || "Unknown",
+    confidence: Number(data.confidence ?? currentDetection.confidence ?? 0),
+    box: String(data.box ?? currentDetection.bounding_box ?? ""),
+  };
+}
+
 function formatStatus(status) {
   return String(status || "completed")
     .split(/[-_\s]+/)
@@ -107,6 +138,60 @@ async function getAllDetections() {
     detections,
     summary: getDetectionsSummary(detections),
   };
+}
+
+async function updateDetection(detectionId, data, actor) {
+  const currentDetection = await detectionRepo.findById(detectionId);
+
+  if (!currentDetection) {
+    return { ok: false, statusCode: 404, message: "Detection not found." };
+  }
+
+  const updates = normalizeDetectionUpdate(data, currentDetection);
+  if (updates.error) {
+    return { ok: false, statusCode: 400, message: updates.error };
+  }
+
+  const trafficSignId = await detectionRepo.upsertTrafficSign(updates.sign, updates.category);
+  await detectionRepo.updateRequest(detectionId, updates.status);
+
+  if (currentDetection.file_id) {
+    await detectionRepo.updateFile(currentDetection.file_id, updates.fileName, updates.fileSize, updates.fileType);
+  }
+
+  await detectionRepo.updateResult(detectionId, trafficSignId, updates.confidence, updates.box);
+  const updatedDetection = formatDetection(await detectionRepo.findById(detectionId));
+
+  await recordAuditLog({
+    userId: actor?.id,
+    action: "Detection updated",
+    entity: "Detection Request",
+    entityId: detectionId,
+    oldValue: formatDetection(currentDetection),
+    newValue: updatedDetection,
+  });
+
+  return { ok: true, detection: updatedDetection };
+}
+
+async function deleteDetection(detectionId, actor) {
+  const currentDetection = await detectionRepo.findById(detectionId);
+
+  if (!currentDetection) {
+    return { ok: false, statusCode: 404, message: "Detection not found." };
+  }
+
+  await detectionRepo.deleteById(detectionId);
+  await recordAuditLog({
+    userId: actor?.id,
+    action: "Detection deleted",
+    entity: "Detection Request",
+    entityId: detectionId,
+    oldValue: formatDetection(currentDetection),
+    newValue: { status: "Deleted" },
+  });
+
+  return { ok: true };
 }
 
 async function addDetection(email, data) {
@@ -335,8 +420,10 @@ async function getDashboardSummary(email) {
 
 module.exports = {
   addDetection,
+  deleteDetection,
   detectSign,
   getAllDetections,
   getDashboardSummary,
   getUserDetections,
+  updateDetection,
 };

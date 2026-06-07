@@ -6,6 +6,7 @@ const DETECTION_SELECT = `
     dr.status,
     dr.requested_at,
     dr.completed_at,
+    f.id AS file_id,
     trim(concat(u.first_name, ' ', u.last_name)) AS user_name,
     u.email AS user_email,
     f.filename,
@@ -39,6 +40,16 @@ async function findAll() {
      ORDER BY dr.requested_at DESC`
   );
   return result.rows;
+}
+
+async function findById(requestId) {
+  const result = await query(
+    `${DETECTION_SELECT}
+     WHERE dr.id = $1
+     LIMIT 1`,
+    [requestId]
+  );
+  return result.rows[0] || null;
 }
 
 async function upsertTrafficSign(signName, category) {
@@ -88,6 +99,58 @@ async function insertResult(requestId, trafficSignId, confidence, boundingBox) {
   );
 }
 
+async function updateRequest(requestId, status) {
+  await query(
+    `
+      UPDATE detection_requests
+      SET status = $1,
+          completed_at = CASE
+            WHEN $1 IN ('completed', 'rejected', 'failed') THEN COALESCE(completed_at, now())
+            ELSE completed_at
+          END
+      WHERE id = $2
+    `,
+    [status, requestId]
+  );
+}
+
+async function updateFile(fileId, filename, fileSize, fileType) {
+  await query(
+    `
+      UPDATE files
+      SET filename = $1,
+          file_path = $1,
+          file_size = $2,
+          entity = $3
+      WHERE id = $4
+    `,
+    [filename, fileSize, fileType, fileId]
+  );
+}
+
+async function updateResult(requestId, trafficSignId, confidence, boundingBox) {
+  const result = await query(
+    `
+      UPDATE detection_results
+      SET traffic_sign_id = $1,
+          confidence = $2,
+          bounding_box = $3,
+          detected_at = now()
+      WHERE request_id = $4
+      RETURNING id
+    `,
+    [trafficSignId, confidence, boundingBox, requestId]
+  );
+
+  if (!result.rows.length) {
+    await insertResult(requestId, trafficSignId, confidence, boundingBox);
+  }
+}
+
+async function deleteById(requestId) {
+  await query(`DELETE FROM detection_requests WHERE id = $1`, [requestId]);
+}
+
 async function findActivePlanByUserId(userId) {
   const result = await query(
     `SELECT plan_name FROM subscriptions
@@ -101,9 +164,14 @@ async function findActivePlanByUserId(userId) {
 module.exports = {
   findByUserEmail,
   findAll,
+  findById,
   upsertTrafficSign,
   insertFile,
   insertRequest,
   insertResult,
+  updateRequest,
+  updateFile,
+  updateResult,
+  deleteById,
   findActivePlanByUserId,
 };
