@@ -8,7 +8,7 @@ import "../styles/dashboard.css";
 import "../styles/reports.css";
 
 const HISTORY_KEY = "traffic-sign-detections";
-const API_BASE_URL = "http://localhost:5000/api";
+import { API_BASE_URL } from "../config/api";
 
 const sampleDetections = [
   {

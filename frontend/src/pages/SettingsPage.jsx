@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import Navbar from "../shared/Navbar";
 import "../styles/settings.css";
 
-const API_BASE_URL = "http://localhost:5000/api";
+import { API_BASE_URL } from "../config/api";
 
 const DEFAULT_SETTINGS = {
   maxUploadSize: "5",

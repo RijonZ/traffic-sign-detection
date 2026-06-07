@@ -26,6 +26,11 @@ async function signup(req, res) {
       return;
     }
 
+    if (password.length < 6) {
+      sendJson(res, 400, { message: "Password must be at least 6 characters." });
+      return;
+    }
+
     const result = await createUserAccount(name, email, password);
 
     if (!result.ok) {

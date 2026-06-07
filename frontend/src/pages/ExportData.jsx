@@ -3,7 +3,7 @@ import Navbar from "../shared/Navbar";
 import "../styles/export.css";
 import "../styles/reports.css";
 
-const API_BASE_URL = "http://localhost:5000/api";
+import { API_BASE_URL } from "../config/api";
 
 const DATASETS = [
   { key: "detections", label: "Detections",  roles: ["Administrator", "Manager"] },

@@ -8,7 +8,7 @@ import "../styles/features.css";
 
 const HISTORY_KEY = "traffic-sign-detections";
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
-const API_BASE_URL = "http://localhost:5000/api";
+import { API_BASE_URL } from "../config/api";
 
 const samplePredictions = [
   { sign: "Stop Sign", category: "Regulatory", confidence: 96, box: "x: 124, y: 88, w: 210, h: 210" },

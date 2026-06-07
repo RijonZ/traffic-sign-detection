@@ -96,6 +96,10 @@ async function createAdminUser(req, res) {
       sendJson(res, 400, { message: "name, email and password are required." });
       return;
     }
+    if (password.length < 6) {
+      sendJson(res, 400, { message: "Password must be at least 6 characters." });
+      return;
+    }
     const result = await createUserByAdmin(name, email, password, role, adminUser);
     if (!result.ok) {
       sendJson(res, 400, { message: result.message });

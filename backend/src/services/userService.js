@@ -79,17 +79,7 @@ function splitName(name) {
   };
 }
 
-function getRoleFromEmail(email) {
-  const normalizedEmail = String(email || "").toLowerCase();
-
-  if (normalizedEmail.includes("admin")) {
-    return "Administrator";
-  }
-
-  if (normalizedEmail.includes("manager")) {
-    return "Manager";
-  }
-
+function getRoleFromEmail() {
   return "User";
 }
 

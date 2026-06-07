@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import Navbar from "../shared/Navbar";
+import { getSocket } from "../socket/socket";
+import { API_BASE_URL } from "../config/api";
 import "../styles/admin-dashboard.css";
 import "../styles/auth.css";
 import "../styles/dashboard.css";
 
 const USERS_KEY = "traffic-sign-users";
 const HISTORY_KEY = "traffic-sign-detections";
-const API_BASE_URL = "http://localhost:5000/api";
-const ADMIN_REFRESH_INTERVAL = 2000;
 
 const sampleUsers = [
   { name: "Admin", email: "admin@trafficsign.ai", role: "Administrator" },
@@ -57,7 +57,6 @@ function AdminDashboard({ currentUser, onLogout, onNavigate }) {
   });
   const [loadingDashboard, setLoadingDashboard] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
-  const [refreshKey, setRefreshKey] = useState(0);
   const [recentActivity, setRecentActivity] = useState(sampleActivity);
 
   useEffect(() => {
@@ -83,7 +82,6 @@ function AdminDashboard({ currentUser, onLogout, onNavigate }) {
           if (data?.summary) {
             setDashboardSummary(data.summary);
           }
-
           if (data?.recentActivity?.length) {
             setRecentActivity(data.recentActivity);
           }
@@ -129,13 +127,32 @@ function AdminDashboard({ currentUser, onLogout, onNavigate }) {
     loadDetections();
     loadFeedbacks();
     loadModelMonitoring();
+
     window.addEventListener("focus", loadUsers);
     window.addEventListener("focus", loadDashboard);
     window.addEventListener("focus", loadDetections);
     window.addEventListener("focus", loadFeedbacks);
     window.addEventListener("focus", loadModelMonitoring);
-    const refreshTimer = window.setInterval(loadUsers, ADMIN_REFRESH_INTERVAL);
-    const dashboardRefreshTimer = window.setInterval(loadDashboard, ADMIN_REFRESH_INTERVAL);
+
+    const socket = getSocket();
+    function handleSocketNotification(notification) {
+      if (notification.type === "new-user") {
+        loadUsers();
+        loadDashboard();
+      }
+      if (notification.type === "detection-completed" || notification.type === "detection-rejected") {
+        loadDetections();
+        loadDashboard();
+        loadModelMonitoring();
+      }
+      if (notification.type === "feedback") {
+        loadFeedbacks();
+      }
+      setLastUpdated(new Date());
+    }
+    if (socket) {
+      socket.on("notification", handleSocketNotification);
+    }
 
     return () => {
       window.removeEventListener("focus", loadUsers);
@@ -143,10 +160,11 @@ function AdminDashboard({ currentUser, onLogout, onNavigate }) {
       window.removeEventListener("focus", loadDetections);
       window.removeEventListener("focus", loadFeedbacks);
       window.removeEventListener("focus", loadModelMonitoring);
-      window.clearInterval(refreshTimer);
-      window.clearInterval(dashboardRefreshTimer);
+      if (socket) {
+        socket.off("notification", handleSocketNotification);
+      }
     };
-  }, [currentUser, fallbackDetections.length, refreshKey]);
+  }, [currentUser, fallbackDetections.length]);
 
   const managers = users.filter((user) => user.role === "Manager").length;
   const regularUsers = users.filter((user) => user.role === "User").length;
@@ -243,9 +261,6 @@ function AdminDashboard({ currentUser, onLogout, onNavigate }) {
             </p>
           </div>
           <div className="admin-header-actions">
-            <button className="secondary-btn" onClick={() => setRefreshKey((key) => key + 1)}>
-              {loadingDashboard ? "Refreshing..." : "Refresh"}
-            </button>
             <button className="primary-btn" onClick={() => onNavigate("users")}>
               Manage Users
             </button>

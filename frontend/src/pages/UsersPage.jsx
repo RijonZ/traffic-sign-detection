@@ -7,7 +7,7 @@ import "../styles/reports.css";
 import "../styles/users.css";
 
 const USERS_KEY = "traffic-sign-users";
-const API_BASE_URL = "http://localhost:5000/api";
+import { API_BASE_URL } from "../config/api";
 const USERS_REFRESH_INTERVAL = 10000;
 
 const defaultUsers = [

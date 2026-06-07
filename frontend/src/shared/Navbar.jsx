@@ -3,7 +3,7 @@ import ChatBot from "./ChatBot";
 import { getSocket } from "../socket/socket";
 import { useApp } from "../context/AppContext";
 
-const API_BASE_URL = "http://localhost:5000/api";
+import { API_BASE_URL } from "../config/api";
 
 const publicLinks = [
   { label: "Home", page: "home" },
