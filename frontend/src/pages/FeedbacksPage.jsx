@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Navbar from "../shared/Navbar";
 import { usePagination, Pagination } from "../shared/Pagination";
 import "../styles/auth.css";
 import "../styles/dashboard.css";
 import "../styles/history.css";
+import "../styles/reports.css";
 
 const API_BASE_URL = "http://localhost:5000/api";
 
@@ -34,6 +35,11 @@ function formatDate(raw) {
 
 function FeedbacksPage({ currentUser, onLogout, onNavigate }) {
   const [feedbacks, setFeedbacks] = useState(null);
+  const [filters, setFilters] = useState({
+    comments: "All",
+    rating: "All",
+    user: "",
+  });
 
   useEffect(() => {
     if (!currentUser || currentUser.role !== "Administrator") return;
@@ -46,11 +52,42 @@ function FeedbacksPage({ currentUser, onLogout, onNavigate }) {
       .catch(() => setFeedbacks([]));
   }, [currentUser]);
 
-  const { page, setPage, totalPages, paginatedItems: paginatedFeedbacks, pageSize } = usePagination(feedbacks ?? []);
+  function updateFilter(key, value) {
+    setFilters((currentFilters) => ({ ...currentFilters, [key]: value }));
+  }
+
+  function resetFilters() {
+    setFilters({ comments: "All", rating: "All", user: "" });
+  }
+
+  const filteredFeedbacks = useMemo(() => {
+    const search = filters.user.trim().toLowerCase();
+
+    return (feedbacks ?? []).filter((feedback) => {
+      const hasComment = Boolean(String(feedback.comment || "").trim());
+      const matchesSearch = !search ||
+        String(feedback.userName || "").toLowerCase().includes(search) ||
+        String(feedback.userEmail || "").toLowerCase().includes(search) ||
+        String(feedback.sign || "").toLowerCase().includes(search);
+      const matchesRating = filters.rating === "All" || Number(feedback.rating) === Number(filters.rating);
+      const matchesComments =
+        filters.comments === "All" ||
+        (filters.comments === "With comments" && hasComment) ||
+        (filters.comments === "No comments" && !hasComment);
+
+      return matchesSearch && matchesRating && matchesComments;
+    });
+  }, [feedbacks, filters]);
+
+  const { page, setPage, totalPages, paginatedItems: paginatedFeedbacks, pageSize } = usePagination(filteredFeedbacks);
   const avgRating =
-    feedbacks?.length
-      ? (feedbacks.reduce((sum, f) => sum + f.rating, 0) / feedbacks.length).toFixed(1)
+    filteredFeedbacks.length
+      ? (filteredFeedbacks.reduce((sum, f) => sum + f.rating, 0) / filteredFeedbacks.length).toFixed(1)
       : "—";
+
+  useEffect(() => {
+    setPage(1);
+  }, [filters, setPage]);
 
   if (!currentUser) {
     return (
@@ -105,7 +142,7 @@ function FeedbacksPage({ currentUser, onLogout, onNavigate }) {
         <section className="history-summary">
           <div className="dashboard-card">
             <h3>Total Feedbacks</h3>
-            <p>{feedbacks ? feedbacks.length : "—"}</p>
+            <p>{feedbacks ? filteredFeedbacks.length : "—"}</p>
           </div>
           <div className="dashboard-card">
             <h3>Average Rating</h3>
@@ -113,8 +150,32 @@ function FeedbacksPage({ currentUser, onLogout, onNavigate }) {
           </div>
           <div className="dashboard-card">
             <h3>With Comments</h3>
-            <p>{feedbacks ? feedbacks.filter((f) => f.comment).length : "—"}</p>
+            <p>{feedbacks ? filteredFeedbacks.filter((f) => f.comment).length : "—"}</p>
           </div>
+        </section>
+
+        <section className="reports-filter-panel feedbacks-filter-panel">
+          <input
+            placeholder="Filter by user, email, or sign"
+            value={filters.user}
+            onChange={(event) => updateFilter("user", event.target.value)}
+          />
+          <select value={filters.rating} onChange={(event) => updateFilter("rating", event.target.value)}>
+            <option value="All">All ratings</option>
+            <option value="5">5 stars</option>
+            <option value="4">4 stars</option>
+            <option value="3">3 stars</option>
+            <option value="2">2 stars</option>
+            <option value="1">1 star</option>
+          </select>
+          <select value={filters.comments} onChange={(event) => updateFilter("comments", event.target.value)}>
+            <option value="All">All comments</option>
+            <option value="With comments">With comments</option>
+            <option value="No comments">No comments</option>
+          </select>
+          <button className="secondary-btn" type="button" onClick={resetFilters}>
+            Reset
+          </button>
         </section>
 
         <section className="history-table">
@@ -131,9 +192,9 @@ function FeedbacksPage({ currentUser, onLogout, onNavigate }) {
             <p style={{ padding: "24px 16px", color: "#888" }}>Loading…</p>
           )}
 
-          {feedbacks !== null && feedbacks.length === 0 && (
+          {feedbacks !== null && filteredFeedbacks.length === 0 && (
             <p style={{ padding: "24px 16px", color: "#888" }}>
-              No feedbacks submitted yet.
+              No feedbacks found.
             </p>
           )}
 
@@ -157,7 +218,7 @@ function FeedbacksPage({ currentUser, onLogout, onNavigate }) {
                 <p>{formatDate(fb.createdAt)}</p>
               </div>
             ))}
-          <Pagination page={page} totalPages={totalPages} total={(feedbacks ?? []).length} pageSize={pageSize} onPage={setPage} />
+          <Pagination page={page} totalPages={totalPages} total={filteredFeedbacks.length} pageSize={pageSize} onPage={setPage} />
         </section>
       </main>
     </div>
