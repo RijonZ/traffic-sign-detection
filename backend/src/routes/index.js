@@ -10,6 +10,8 @@ const {
   getAdminAuditLogs,
   getAdminDashboardSummary,
   getAdminDetections,
+  updateAdminDetection,
+  deleteAdminDetection,
   getAdminReports,
   getAdminUsers,
   getModelMonitoring,
@@ -120,6 +122,8 @@ router.get("/admin/model-monitoring", getModelMonitoring);
 router.get("/admin/audit-logs", getAdminAuditLogs);
 router.get("/admin/dashboard", getAdminDashboardSummary);
 router.get("/admin/detections", getAdminDetections);
+router.put("/admin/detections/:id", updateAdminDetection);
+router.delete("/admin/detections/:id", deleteAdminDetection);
 router.get("/admin/reports/export", exportAdminReports);
 router.get("/admin/reports/:id/pdf", downloadAdminReport);
 router.get("/admin/reports", getAdminReports);

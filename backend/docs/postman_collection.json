@@ -425,6 +425,25 @@
           }
         },
         {
+          "name": "Update Detection",
+          "request": {
+            "method": "PUT",
+            "url": "http://localhost:5000/api/admin/detections/detection-id?adminEmail=admin@trafficsign.ai",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fileName\": \"updated-stop-sign.jpg\",\n  \"fileType\": \"image/jpeg\",\n  \"fileSize\": 245760,\n  \"sign\": \"Stop Sign\",\n  \"category\": \"Regulatory\",\n  \"confidence\": 96,\n  \"status\": \"Completed\",\n  \"box\": \"x: 124, y: 88, w: 210, h: 210\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Detection",
+          "request": {
+            "method": "DELETE",
+            "url": "http://localhost:5000/api/admin/detections/detection-id?adminEmail=admin@trafficsign.ai"
+          }
+        },
+        {
           "name": "Get All Reports",
           "request": {
             "method": "GET",

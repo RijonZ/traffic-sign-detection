@@ -1,6 +1,6 @@
 const { getAuditLogs } = require("../services/auditLogService");
 const { getAdminDashboard } = require("../services/adminDashboardService");
-const { getAllDetections } = require("../services/detectionService");
+const { deleteDetection, getAllDetections, updateDetection } = require("../services/detectionService");
 const { getModelMonitoringSummary } = require("../services/modelMonitoringService");
 const { exportReportsCsv, getAllReports, getAdminReportPdf } = require("../services/reportService");
 const { findUserByEmail, getAllUsers, getUsersSummaryFromList, createUserByAdmin, updateUser, deleteUser, bulkImportUsers } = require("../services/userService");
@@ -67,6 +67,36 @@ async function exportAdminReports(req, res) {
 async function getAdminDetections(req, res) {
   if (!(await checkPermission(req, res, "view_admin_detections"))) return;
   sendJson(res, 200, await getAllDetections());
+}
+
+async function updateAdminDetection(req, res) {
+  if (!(await checkPermission(req, res, "view_admin_detections"))) return;
+
+  try {
+    const adminUser = await getAdminUser(req);
+    const result = await updateDetection(req.params.id, req.body, adminUser);
+    if (!result.ok) {
+      sendJson(res, result.statusCode || 400, { message: result.message });
+      return;
+    }
+
+    sendJson(res, 200, { detection: result.detection });
+  } catch {
+    sendJson(res, 400, { message: "Invalid request body." });
+  }
+}
+
+async function deleteAdminDetection(req, res) {
+  if (!(await checkPermission(req, res, "view_admin_detections"))) return;
+
+  const adminUser = await getAdminUser(req);
+  const result = await deleteDetection(req.params.id, adminUser);
+  if (!result.ok) {
+    sendJson(res, result.statusCode || 400, { message: result.message });
+    return;
+  }
+
+  sendJson(res, 200, { ok: true });
 }
 
 async function getAdminDashboardSummary(req, res) {
@@ -236,6 +266,8 @@ module.exports = {
   getAdminAuditLogs,
   getAdminDashboardSummary,
   getAdminDetections,
+  updateAdminDetection,
+  deleteAdminDetection,
   getAdminReports,
   getAdminUsers,
   getModelMonitoring,
