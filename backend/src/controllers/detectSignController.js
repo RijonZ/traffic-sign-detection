@@ -21,14 +21,14 @@ async function getDetectionHistory(req, res) {
 
 async function createDetectSignRequest(req, res) {
   try {
-    const { userEmail, fileName, fileType, fileSize } = req.body;
+    const { userEmail, fileName, fileType, fileSize, imageBase64 } = req.body;
 
     if (!(await findUserByEmail(userEmail || ""))) {
       sendUserNotFound(res);
       return;
     }
 
-    const result = await detectSign(userEmail, { fileName, fileType, fileSize });
+    const result = await detectSign(userEmail, { fileName, fileType, fileSize, imageBase64 });
     sendJson(res, result.ok ? 201 : 422, result);
   } catch {
     sendJson(res, 400, { message: "Invalid request body." });

@@ -6,16 +6,8 @@ import "../styles/dashboard.css";
 import "../styles/detect.css";
 import "../styles/features.css";
 
-const HISTORY_KEY = "traffic-sign-detections";
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 import { API_BASE_URL } from "../config/api";
-
-const samplePredictions = [
-  { sign: "Stop Sign", category: "Regulatory", confidence: 96, box: "x: 124, y: 88, w: 210, h: 210" },
-  { sign: "Speed Limit", category: "Regulatory", confidence: 92, box: "x: 98, y: 74, w: 180, h: 180" },
-  { sign: "Pedestrian Crossing", category: "Warning", confidence: 89, box: "x: 140, y: 102, w: 195, h: 170" },
-  { sign: "No Entry", category: "Prohibition", confidence: 94, box: "x: 110, y: 90, w: 205, h: 205" },
-];
 
 const initialSteps = [
   { label: "Created", done: false },
@@ -28,14 +20,6 @@ const initialSteps = [
   { label: "Completed", done: false },
 ];
 
-function getHistoryKey(currentUser) {
-  return currentUser?.email ? `${HISTORY_KEY}:${currentUser.email}` : HISTORY_KEY;
-}
-
-function readHistory(currentUser) {
-  return JSON.parse(localStorage.getItem(getHistoryKey(currentUser)) || "[]");
-}
-
 function DetectSignPage({ currentUser, onLogout, onNavigate }) {
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState("");
@@ -44,7 +28,7 @@ function DetectSignPage({ currentUser, onLogout, onNavigate }) {
   const [status, setStatus] = useState("Ready");
   const [steps, setSteps] = useState(initialSteps);
   const [result, setResult] = useState(null);
-  const [history, setHistory] = useState(() => readHistory(currentUser));
+  const [history, setHistory] = useState([]);
   const timers = useRef([]);
 
   const canDetect = useMemo(() => file && !error && status !== "Processing", [file, error, status]);
@@ -52,14 +36,16 @@ function DetectSignPage({ currentUser, onLogout, onNavigate }) {
   useEffect(() => {
     return () => {
       clearTimers();
-      if (preview) {
-        URL.revokeObjectURL(preview);
-      }
+      if (preview) URL.revokeObjectURL(preview);
     };
   }, [preview]);
 
   useEffect(() => {
-    setHistory(readHistory(currentUser));
+    if (!currentUser?.email) return;
+    fetch(`${API_BASE_URL}/detect-sign?userEmail=${encodeURIComponent(currentUser.email)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => { if (data?.detections) setHistory(data.detections.slice(0, 5)); })
+      .catch(() => {});
   }, [currentUser]);
 
   function clearTimers() {
@@ -117,14 +103,22 @@ function DetectSignPage({ currentUser, onLogout, onNavigate }) {
   }
 
   function saveDetectionResult(completedResult) {
-    const nextHistory = [completedResult, ...history].slice(0, 5);
-
     setResult(completedResult);
-    setHistory(nextHistory);
-    localStorage.setItem(getHistoryKey(currentUser), JSON.stringify(nextHistory));
+    setHistory((prev) => [completedResult, ...prev].slice(0, 5));
+  }
+
+  function readFileAsBase64(selectedFile) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(",")[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(selectedFile);
+    });
   }
 
   async function requestBackendDetection() {
+    const imageBase64 = await readFileAsBase64(file).catch(() => null);
+
     const response = await fetch(`${API_BASE_URL}/detect-sign`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -133,6 +127,7 @@ function DetectSignPage({ currentUser, onLogout, onNavigate }) {
         fileName: file.name,
         fileType: file.type,
         fileSize: file.size,
+        imageBase64,
       }),
     });
     const data = await response.json();
@@ -147,15 +142,15 @@ function DetectSignPage({ currentUser, onLogout, onNavigate }) {
   }
 
   function buildLocalDetection() {
-    const prediction = samplePredictions[file.name.length % samplePredictions.length];
-
     return {
       id: Date.now(),
       fileName: file.name,
       requestedBy: currentUser.name,
       detectedAt: new Date().toLocaleString(),
+      sign: "Not detected",
+      category: "Unknown",
+      confidence: 0,
       status: "Completed",
-      ...prediction,
     };
   }
 

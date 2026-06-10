@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Navbar from "../shared/Navbar";
 import { getSocket } from "../socket/socket";
 import { API_BASE_URL } from "../config/api";
@@ -6,29 +6,11 @@ import "../styles/admin-dashboard.css";
 import "../styles/auth.css";
 import "../styles/dashboard.css";
 
-const USERS_KEY = "traffic-sign-users";
-const HISTORY_KEY = "traffic-sign-detections";
-
-const sampleUsers = [
-  { name: "Admin", email: "admin@trafficsign.ai", role: "Administrator" },
-  { name: "Manager", email: "manager@trafficsign.ai", role: "Manager" },
-  { name: "User", email: "user@trafficsign.ai", role: "User" },
-];
-
 const sampleActivity = [
   "Manager reviewed detection reports",
   "User completed a new sign detection",
   "Model monitoring status checked",
 ];
-
-function readUsers() {
-  const savedUsers = JSON.parse(localStorage.getItem(USERS_KEY) || "[]");
-  return savedUsers.length ? savedUsers : sampleUsers;
-}
-
-function readDetections() {
-  return JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
-}
 
 function formatDateTime(value) {
   if (!value) return "Not available";
@@ -46,15 +28,11 @@ function formatDateTime(value) {
 }
 
 function AdminDashboard({ currentUser, onLogout, onNavigate }) {
-  const fallbackUsers = useMemo(readUsers, []);
-  const [users, setUsers] = useState(fallbackUsers);
-  const fallbackDetections = useMemo(readDetections, []);
-  const [detections, setDetections] = useState(fallbackDetections);
+  const [users, setUsers] = useState([]);
+  const [detections, setDetections] = useState([]);
   const [feedbacks, setFeedbacks] = useState([]);
   const [modelMetrics, setModelMetrics] = useState(null);
-  const [dashboardSummary, setDashboardSummary] = useState({
-    detections: fallbackDetections.length,
-  });
+  const [dashboardSummary, setDashboardSummary] = useState({ detections: 0 });
   const [loadingDashboard, setLoadingDashboard] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [recentActivity, setRecentActivity] = useState(sampleActivity);
@@ -67,29 +45,18 @@ function AdminDashboard({ currentUser, onLogout, onNavigate }) {
     function loadUsers() {
       fetch(`${API_BASE_URL}/admin/users?adminEmail=${encodeURIComponent(currentUser.email)}`)
         .then((response) => (response.ok ? response.json() : null))
-        .then((data) => {
-          if (data?.users?.length) {
-            setUsers(data.users);
-          }
-        })
-        .catch(() => setUsers(fallbackUsers));
+        .then((data) => setUsers(data?.users || []))
+        .catch(() => setUsers([]));
     }
 
     function loadDashboard() {
       fetch(`${API_BASE_URL}/admin/dashboard?adminEmail=${encodeURIComponent(currentUser.email)}`)
         .then((response) => (response.ok ? response.json() : null))
         .then((data) => {
-          if (data?.summary) {
-            setDashboardSummary(data.summary);
-          }
-          if (data?.recentActivity?.length) {
-            setRecentActivity(data.recentActivity);
-          }
+          if (data?.summary) setDashboardSummary(data.summary);
+          if (data?.recentActivity?.length) setRecentActivity(data.recentActivity);
         })
-        .catch(() => {
-          setDashboardSummary({ detections: fallbackDetections.length });
-          setRecentActivity(sampleActivity);
-        })
+        .catch(() => setDashboardSummary({ detections: 0 }))
         .finally(() => {
           setLastUpdated(new Date());
           setLoadingDashboard(false);
@@ -99,12 +66,8 @@ function AdminDashboard({ currentUser, onLogout, onNavigate }) {
     function loadDetections() {
       fetch(`${API_BASE_URL}/admin/detections?adminEmail=${encodeURIComponent(currentUser.email)}`)
         .then((response) => (response.ok ? response.json() : null))
-        .then((data) => {
-          if (data?.detections) {
-            setDetections(data.detections);
-          }
-        })
-        .catch(() => setDetections(fallbackDetections));
+        .then((data) => setDetections(data?.detections || []))
+        .catch(() => setDetections([]));
     }
 
     function loadFeedbacks() {
@@ -164,7 +127,7 @@ function AdminDashboard({ currentUser, onLogout, onNavigate }) {
         socket.off("notification", handleSocketNotification);
       }
     };
-  }, [currentUser, fallbackDetections.length]);
+  }, [currentUser]);
 
   const managers = users.filter((user) => user.role === "Manager").length;
   const regularUsers = users.filter((user) => user.role === "User").length;

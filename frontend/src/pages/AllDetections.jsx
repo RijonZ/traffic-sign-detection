@@ -7,51 +7,7 @@ import "../styles/auth.css";
 import "../styles/dashboard.css";
 import "../styles/reports.css";
 
-const HISTORY_KEY = "traffic-sign-detections";
 import { API_BASE_URL } from "../config/api";
-
-const sampleDetections = [
-  {
-    id: "DET-1001",
-    fileName: "city-road-stop.jpg",
-    requestedBy: "User",
-    sign: "Stop Sign",
-    category: "Regulatory",
-    confidence: 96,
-    status: "Completed",
-    detectedAt: "2026-05-18 10:24",
-  },
-  {
-    id: "DET-1002",
-    fileName: "school-crossing.png",
-    requestedBy: "Manager",
-    sign: "Pedestrian Crossing",
-    category: "Warning",
-    confidence: 89,
-    status: "Completed",
-    detectedAt: "2026-05-18 12:10",
-  },
-  {
-    id: "DET-1003",
-    fileName: "speed-limit-road.jpg",
-    requestedBy: "User",
-    sign: "Speed Limit",
-    category: "Regulatory",
-    confidence: 92,
-    status: "Processing",
-    detectedAt: "2026-05-19 09:35",
-  },
-  {
-    id: "DET-1004",
-    fileName: "blurred-night-image.jpg",
-    requestedBy: "User",
-    sign: "Not detected",
-    category: "Unknown",
-    confidence: 0,
-    status: "Rejected",
-    detectedAt: "2026-05-19 14:42",
-  },
-];
 
 const workflowSteps = [
   "Image uploaded",
@@ -61,28 +17,8 @@ const workflowSteps = [
   "User notified",
 ];
 
-function readDetections() {
-  const savedDetections = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
-
-  if (!savedDetections.length) {
-    return sampleDetections;
-  }
-
-  return savedDetections.map((item) => ({
-    id: item.id,
-    fileName: item.fileName,
-    requestedBy: item.requestedBy || "User",
-    sign: item.sign,
-    category: item.category || "Unknown",
-    confidence: item.confidence || 0,
-    status: item.status || "Completed",
-    detectedAt: item.detectedAt || "Saved locally",
-  }));
-}
-
 function AllDetections({ currentUser, onLogout, onNavigate }) {
-  const fallbackDetections = useMemo(readDetections, []);
-  const [detections, setDetections] = useState(fallbackDetections);
+  const [detections, setDetections] = useState([]);
   const [filters, setFilters] = useState({
     dateFrom: "",
     dateTo: "",
@@ -91,19 +27,13 @@ function AllDetections({ currentUser, onLogout, onNavigate }) {
   });
 
   useEffect(() => {
-    if (!currentUser || currentUser.role !== "Administrator") {
-      return;
-    }
+    if (!currentUser || currentUser.role !== "Administrator") return;
 
     fetch(`${API_BASE_URL}/admin/detections?adminEmail=${encodeURIComponent(currentUser.email)}`)
       .then((response) => (response.ok ? response.json() : null))
-      .then((data) => {
-        if (data?.detections?.length) {
-          setDetections(data.detections);
-        }
-      })
-      .catch(() => setDetections(fallbackDetections));
-  }, [currentUser, fallbackDetections]);
+      .then((data) => setDetections(data?.detections || []))
+      .catch(() => setDetections([]));
+  }, [currentUser]);
 
   function updateFilter(key, value) {
     setFilters((currentFilters) => ({ ...currentFilters, [key]: value }));

@@ -7,7 +7,16 @@ async function getGlobalStats() {
         (SELECT count(*) FROM users WHERE is_active = true) AS total_users,
         (SELECT count(*) FROM detection_requests) AS total_detections,
         (SELECT count(*) FROM detection_requests WHERE status = 'completed') AS completed_detections,
-        (SELECT COALESCE(avg(confidence), 0) FROM detection_results) AS average_confidence
+        (SELECT COALESCE(avg(confidence), 0) FROM detection_results) AS average_confidence,
+        (
+          SELECT ts.sign_name
+          FROM detection_requests dr
+          JOIN detection_results res ON res.request_id = dr.id
+          LEFT JOIN traffic_signs ts ON ts.id = res.traffic_sign_id
+          WHERE dr.status = 'completed'
+          ORDER BY dr.requested_at DESC
+          LIMIT 1
+        ) AS latest_sign
     `
   );
   return result.rows[0];

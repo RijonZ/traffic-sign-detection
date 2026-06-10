@@ -20,11 +20,13 @@ const VALID_STATUSES = new Set([
   "failed",
 ]);
 
+const ML_SERVICE_URL = process.env.ML_SERVICE_URL || "http://localhost:5001";
+
 const samplePredictions = [
-  { sign: "Stop Sign", category: "Regulatory", confidence: 96, box: "x: 124, y: 88, w: 210, h: 210" },
-  { sign: "Speed Limit", category: "Regulatory", confidence: 92, box: "x: 98, y: 74, w: 180, h: 180" },
-  { sign: "Pedestrian Crossing", category: "Warning", confidence: 89, box: "x: 140, y: 102, w: 195, h: 170" },
-  { sign: "No Entry", category: "Prohibition", confidence: 94, box: "x: 110, y: 90, w: 205, h: 205" },
+  { sign: "Stop Sign", category: "Regulatory", confidence: 96, box: "" },
+  { sign: "Speed Limit 50km/h", category: "Regulatory", confidence: 92, box: "" },
+  { sign: "Pedestrian Crossing", category: "Warning", confidence: 89, box: "" },
+  { sign: "No Entry", category: "Prohibition", confidence: 94, box: "" },
 ];
 
 const workflow = [
@@ -54,8 +56,31 @@ function validateImage(file) {
   return "";
 }
 
-function predictTrafficSign(fileName) {
-  return samplePredictions[String(fileName).length % samplePredictions.length];
+async function predictTrafficSign(imageBase64, fileName) {
+  if (!imageBase64) {
+    return samplePredictions[String(fileName).length % samplePredictions.length];
+  }
+
+  try {
+    const response = await fetch(`${ML_SERVICE_URL}/predict`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image_base64: imageBase64 }),
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (!response.ok) throw new Error("ML service error");
+
+    const data = await response.json();
+    return {
+      sign: data.sign,
+      category: data.category,
+      confidence: Math.round(data.confidence),
+      box: "",
+    };
+  } catch {
+    return samplePredictions[String(fileName).length % samplePredictions.length];
+  }
 }
 
 function formatDetection(row) {
@@ -293,7 +318,7 @@ async function detectSign(email, file) {
     };
   }
 
-  const prediction = predictTrafficSign(file.fileName);
+  const prediction = await predictTrafficSign(file.imageBase64, file.fileName);
   const detection = await addDetection(email, {
     ...file,
     ...prediction,

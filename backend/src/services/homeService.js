@@ -12,6 +12,7 @@ async function getGlobalHomeStats() {
     totalDetections: Number(stats.total_detections || 0),
     completedDetections: Number(stats.completed_detections || 0),
     averageConfidence: formatPercent(stats.average_confidence),
+    latestSign: stats.latest_sign || null,
   };
 }
 
@@ -68,9 +69,9 @@ function getUserFeatures(userStats, globalStats) {
       },
       {
         title: "Latest Detection",
-        description: userStats.latestSign === "No detection yet"
-          ? "No detections recorded yet."
-          : `Most recent sign: ${userStats.latestSign}.`,
+        description: globalStats.latestSign
+          ? `Most recent sign: ${globalStats.latestSign}.`
+          : "No detections recorded yet.",
         page: "all-detections",
         actionLabel: "View all detections",
       },

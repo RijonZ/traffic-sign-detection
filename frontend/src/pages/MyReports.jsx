@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Navbar from "../shared/Navbar";
 import { usePagination, Pagination } from "../shared/Pagination";
 import { downloadReportPdf } from "../utils/reportPdf";
@@ -8,84 +8,29 @@ import "../styles/dashboard.css";
 import "../styles/history.css";
 import "../styles/reports.css";
 
-const HISTORY_KEY = "traffic-sign-detections";
 import { API_BASE_URL } from "../config/api";
 
-const sampleReports = [
-  {
-    id: "REP-1001",
-    fileName: "road-crossing.jpg",
-    sign: "Pedestrian Crossing",
-    category: "Warning",
-    confidence: 96,
-    status: "Completed",
-    createdAt: "2026-05-10",
-  },
-  {
-    id: "REP-1002",
-    fileName: "speed-limit.png",
-    sign: "Speed Limit",
-    category: "Regulatory",
-    confidence: 91,
-    status: "Completed",
-    createdAt: "2026-05-11",
-  },
-  {
-    id: "REP-1003",
-    fileName: "blurred-upload.jpg",
-    sign: "Not detected",
-    category: "Unknown",
-    confidence: 0,
-    status: "Rejected",
-    createdAt: "2026-05-13",
-  },
-];
-
-function readReports() {
-  const savedDetections = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
-
-  if (!savedDetections.length) {
-    return sampleReports;
-  }
-
-  return savedDetections.map((item) => ({
-    id: `REP-${item.id}`,
-    fileName: item.fileName,
-    sign: item.sign,
-    category: item.category,
-    confidence: item.confidence,
-    status: "Completed",
-    createdAt: item.detectedAt,
-  }));
-}
-
 function MyReports({ currentUser, onLogout, onNavigate }) {
-  const fallbackReports = useMemo(readReports, []);
-  const [reports, setReports] = useState(fallbackReports);
+  const [reports, setReports] = useState([]);
   const [selectedReport, setSelectedReport] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
 
   useEffect(() => {
-    if (!currentUser) {
-      return;
-    }
+    if (!currentUser) return;
 
     setIsLoading(true);
     setStatusMessage("");
 
     fetch(`${API_BASE_URL}/users/${encodeURIComponent(currentUser.email)}/reports`)
       .then((response) => (response.ok ? response.json() : Promise.reject()))
-      .then((data) => {
-        const backendReports = data?.reports || [];
-        setReports(backendReports);
-      })
+      .then((data) => setReports(data?.reports || []))
       .catch(() => {
-        setReports(fallbackReports);
-        setStatusMessage("Backend reports are not available, showing saved demo reports.");
+        setReports([]);
+        setStatusMessage("Could not load reports. Make sure the backend is running.");
       })
       .finally(() => setIsLoading(false));
-  }, [currentUser, fallbackReports]);
+  }, [currentUser]);
 
   const { page, setPage, totalPages, paginatedItems: paginatedReports, pageSize } = usePagination(reports);
   const completedCount = reports.filter((report) => report.status === "Completed").length;

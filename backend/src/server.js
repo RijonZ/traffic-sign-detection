@@ -24,7 +24,7 @@ app.use(cors({
     callback(new Error(`Origin ${origin} is not allowed by CORS.`));
   },
 }));
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
 
 app.use("/api", router);
 
