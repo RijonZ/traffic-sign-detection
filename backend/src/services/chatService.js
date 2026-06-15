@@ -75,7 +75,7 @@ function createFallbackReply(message, user = {}) {
   return `${getRoleHint(role)} You can also ask me about confidence, rejected uploads, reports, subscription plans, detection history, and exports.`;
 }
 
-async function createChatReply(message, user = {}) {
+async function createChatReply(message, user = {}, history = []) {
   const text = String(message || "").trim();
   const role = user.role || "User";
 
@@ -95,22 +95,33 @@ async function createChatReply(message, user = {}) {
     };
   }
 
+  const systemPrompt = [
+    "You are the AI assistant inside a Traffic Sign Detection web application.",
+    "Help users with authentication, dashboards, traffic sign detection, detection history, reports, subscriptions, exports, admin users, and project workflow.",
+    "If the user asks about app behavior, answer based on this app: React frontend, Node backend, CockroachDB/PostgreSQL database, and a demo traffic sign prediction flow.",
+    `The current user's role is ${role}. Tailor guidance to that role.`,
+    "Support both Albanian and English. Match the user's language: answer in Albanian when the user writes in Albanian, and answer in English when the user writes in English.",
+    "Be concise, friendly, and practical. If a question is unrelated, still answer helpfully, but keep it brief.",
+  ].join(" ");
+
+  const formattedHistory = Array.isArray(history)
+    ? history
+        .filter((m) => m.sender && m.text)
+        .map((m) => ({ role: m.sender === "user" ? "user" : "assistant", content: m.text }))
+    : [];
+
   try {
-    const response = await client.responses.create({
+    const response = await client.chat.completions.create({
       model: process.env.OPENAI_CHAT_MODEL || "gpt-4.1-mini",
-      instructions: [
-        "You are the AI assistant inside a Traffic Sign Detection web application.",
-        "Help users with authentication, dashboards, traffic sign detection, detection history, reports, subscriptions, exports, admin users, and project workflow.",
-        "If the user asks about app behavior, answer based on this app: React frontend, Node backend, CockroachDB/PostgreSQL database, and a demo traffic sign prediction flow.",
-        `The current user's role is ${role}. Tailor guidance to that role.`,
-        "Support both Albanian and English. Match the user's language: answer in Albanian when the user writes in Albanian, and answer in English when the user writes in English.",
-        "Be concise, friendly, and practical. If a question is unrelated, still answer helpfully, but keep it brief.",
-      ].join(" "),
-      input: text,
+      messages: [
+        { role: "system", content: systemPrompt },
+        ...formattedHistory,
+        { role: "user", content: text },
+      ],
     });
 
     return {
-      reply: response.output_text || createFallbackReply(message, user),
+      reply: response.choices?.[0]?.message?.content || createFallbackReply(message, user),
       source: "openai",
     };
   } catch (error) {

@@ -28,6 +28,7 @@ function DetectSignPage({ currentUser, onLogout, onNavigate }) {
   const [status, setStatus] = useState("Ready");
   const [steps, setSteps] = useState(initialSteps);
   const [result, setResult] = useState(null);
+  const [thresholdWarning, setThresholdWarning] = useState(null);
   const [history, setHistory] = useState([]);
   const timers = useRef([]);
 
@@ -138,7 +139,7 @@ function DetectSignPage({ currentUser, onLogout, onNavigate }) {
       throw err;
     }
 
-    return data.detection;
+    return { detection: data.detection, belowThreshold: data.belowThreshold, threshold: data.threshold, rawConfidence: data.rawConfidence };
   }
 
   function buildLocalDetection() {
@@ -175,13 +176,18 @@ function DetectSignPage({ currentUser, onLogout, onNavigate }) {
     clearTimers();
     setError("");
     setResult(null);
+    setThresholdWarning(null);
     setSteps(initialSteps);
     setStatus("Processing");
 
     let detectionResult;
+    let thresholdWarning = null;
     try {
-      const backendDetection = await requestBackendDetection();
-      detectionResult = formatBackendDetection(backendDetection);
+      const response = await requestBackendDetection();
+      detectionResult = formatBackendDetection(response.detection);
+      if (response.belowThreshold) {
+        thresholdWarning = `Confidence ${response.rawConfidence}% is below the ${response.threshold}% threshold. The sign was not identified.`;
+      }
     } catch (requestError) {
       if (requestError.rateLimited) {
         setError(requestError.message);
@@ -199,6 +205,7 @@ function DetectSignPage({ currentUser, onLogout, onNavigate }) {
     timers.current.push(
       setTimeout(() => {
         saveDetectionResult(detectionResult);
+        setThresholdWarning(thresholdWarning);
       }, 8 * 450)
     );
   }
@@ -302,7 +309,11 @@ function DetectSignPage({ currentUser, onLogout, onNavigate }) {
                 <h2>{result.sign}</h2>
                 <p>{result.category}</p>
                 <strong>{result.confidence}% confidence</strong>
-                <span>{result.box}</span>
+                {thresholdWarning && (
+                  <p style={{ color: "#dc2626", fontSize: "13px", marginTop: "8px", fontWeight: "500" }}>
+                    {thresholdWarning}
+                  </p>
+                )}
                 <button className="secondary-btn" onClick={downloadReport}>
                   Download Report
                 </button>

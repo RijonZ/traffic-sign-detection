@@ -43,17 +43,17 @@ function getPublicFeatures(globalStats) {
   return [
     {
       title: "Fast Detection",
-      description: `${globalStats.totalDetections} detection requests are saved in the system.`,
+      description: "Upload a road image and get a classified result in seconds. The model covers 43 traffic sign categories.",
     },
     {
       title: "Prediction Result",
-      description: `Average confidence across saved results is ${globalStats.averageConfidence}.`,
+      description: `Every prediction includes a confidence score. ${globalStats.completedDetections} detections completed so far with an average confidence of ${globalStats.averageConfidence}.`,
     },
     {
       title: "Detection History",
-      description: `${globalStats.completedDetections} completed detections are available for review.`,
-      page: "history",
-      actionLabel: "Open history",
+      description: "Every completed detection is stored and available for download as a PDF report.",
+      page: "login",
+      actionLabel: "Sign up to get started",
     },
   ];
 }

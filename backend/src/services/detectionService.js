@@ -3,6 +3,7 @@ const rateLimitLogRepo = require("../repositories/rateLimitLogRepository");
 const { getClient: getRedis } = require("../db/redis");
 const { recordAuditLog } = require("./auditLogService");
 const { findUserByEmail } = require("./userService");
+const { getSettings } = require("./settingsService");
 
 const BASIC_PLAN_LIMIT = 3;
 
@@ -318,7 +319,21 @@ async function detectSign(email, file) {
     };
   }
 
-  const prediction = await predictTrafficSign(file.imageBase64, file.fileName);
+  const settings = await getSettings().catch(() => ({ confidenceThreshold: "80" }));
+  const threshold = Number(settings.confidenceThreshold || 80);
+
+  const rawPrediction = await predictTrafficSign(file.imageBase64, file.fileName);
+  const belowThreshold = rawPrediction.confidence < threshold;
+
+  const prediction = belowThreshold
+    ? {
+        sign: "Not detected",
+        category: "Unknown",
+        confidence: rawPrediction.confidence,
+        box: "",
+      }
+    : rawPrediction;
+
   const detection = await addDetection(email, {
     ...file,
     ...prediction,
@@ -330,24 +345,27 @@ async function detectSign(email, file) {
   }
   const { createNotificationForEmail, notifyRoles } = require("./notificationService");
 
-  await createNotificationForEmail(
-    email,
-    "detection-completed",
-    "Detection completed",
-    `${prediction.sign} was detected with ${prediction.confidence}% confidence.`
-  );
-  await notifyRoles(
-    ["Administrator", "Manager"],
-    "detection-completed",
-    "New detection completed",
-    `${email} completed a ${prediction.sign} detection.`
-  );
+  const notifMessage = belowThreshold
+    ? `Detection confidence was ${rawPrediction.confidence}% (below the ${threshold}% threshold). The model guessed "${rawPrediction.sign}" but the result was not recorded.`
+    : `${prediction.sign} was detected with ${prediction.confidence}% confidence.`;
+
+  const adminMessage = belowThreshold
+    ? `${email} submitted an image. Model guessed "${rawPrediction.sign}" at ${rawPrediction.confidence}% — below the ${threshold}% threshold.`
+    : `${email} completed a ${prediction.sign} detection at ${prediction.confidence}%.`;
+
+  await createNotificationForEmail(email, "detection-completed", "Detection completed", notifMessage);
+  await notifyRoles(["Administrator", "Manager"], "detection-completed", "New detection completed", adminMessage);
 
   return {
     ok: true,
     workflow,
     detection,
-    notification: "Detection completed and saved.",
+    belowThreshold,
+    threshold,
+    rawConfidence: rawPrediction.confidence,
+    notification: belowThreshold
+      ? `Confidence ${rawPrediction.confidence}% is below the ${threshold}% threshold. Result not recorded.`
+      : "Detection completed and saved.",
   };
 }
 

@@ -97,7 +97,7 @@ function ChatBot({ currentUser }) {
       const response = await fetch(`${API_BASE_URL}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: currentText, user: currentUser }),
+        body: JSON.stringify({ message: currentText, user: currentUser, history: messages.slice(-10) }),
       });
       const data = response.ok ? await response.json() : null;
       const botMessage = { sender: "bot", text: data?.reply || getBotReply(currentText, currentUser) };

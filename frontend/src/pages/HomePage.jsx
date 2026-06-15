@@ -61,17 +61,17 @@ function HomePage({ currentUser, onLogout, onNavigate }) {
   const featureCards = homeData?.features || [
     {
       title: "Fast Detection",
-      description: "Run traffic sign predictions from a clean upload workflow.",
+      description: "Upload a road image and get a classified result in seconds. The model covers 43 traffic sign categories.",
     },
     {
       title: "Prediction Result",
-      description: "Review detected sign labels with confidence score context.",
+      description: "Every prediction includes a confidence score. Results below the configured threshold are flagged automatically.",
     },
     {
       title: "Detection History",
-      description: "Keep previous detection requests available for follow-up review.",
-      page: "history",
-      actionLabel: "Open history",
+      description: "Every completed detection is stored and available for download as a PDF report.",
+      page: "login",
+      actionLabel: "Sign up to get started",
     },
   ];
 
@@ -126,9 +126,9 @@ function HomePage({ currentUser, onLogout, onNavigate }) {
           )}
           <button
             className="secondary-btn full-width"
-            onClick={() => onNavigate(currentUser ? actions[0].page : "history")}
+            onClick={() => onNavigate(currentUser ? actions[0].page : "login")}
           >
-            {currentUser ? "Continue" : "View History"}
+            {currentUser ? "Continue" : "Get Started"}
           </button>
         </div>
       </section>

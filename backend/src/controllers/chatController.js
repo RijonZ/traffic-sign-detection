@@ -3,8 +3,8 @@ const { sendJson } = require("../utils/http");
 
 async function sendMessage(req, res) {
   try {
-    const { message, user } = req.body;
-    const result = await createChatReply(message, user);
+    const { message, user, history } = req.body;
+    const result = await createChatReply(message, user, history);
 
     sendJson(res, 200, {
       reply: result.reply,
